@@ -35,7 +35,7 @@ int main(int argc, char const *argv[])
 		/* set the options */
 		tcsetattr(ttyS0, TCSANOW, &options);
 
-		char writeMSG[10] = "ATS1?\r\n" ;
+		char writeMSG[10] = "AT\r\n" ;
 
 		size = write(ttyS0, writeMSG, 10) ;
 
@@ -48,7 +48,7 @@ int main(int argc, char const *argv[])
 
 			size = read(ttyS0, readMSG, 100) ;
 
-			printf("%d byte read : %s\n", size, readMSG);
+			printf("%s", size, readMSG);
 		}
 
 		close(ttyS0) ;
