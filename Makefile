@@ -21,7 +21,7 @@ export LDFLAGS += -pthread
 export PROG = $(BINDIR)/$(EXENAME)
 
 SRC=$(wildcard $(SRCDIR)/*.c)
-OBJ=$(SRC:$(SRCDIR)%.cpp=$(OBJDIR)%.o)
+OBJ=$(SRC:$(SRCDIR)%.c=$(OBJDIR)%.o)
 
 all : $(PROG)
 
@@ -33,6 +33,9 @@ $(OBJDIR)/%.o : $(SRCDIR)/%.c
 	@mkdir -p $(OBJDIR)
 	@mkdir -p $(LIBDIR)
 	$(CC) $(CCFLAGS) -c $< -o $@
+
+test :
+	echo $(OBJ)
 
 touch :
 	touch $(SRCDIR)/*.c
