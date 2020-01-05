@@ -4,8 +4,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
-//#include <termios.h>
-#include <asm/termios.h>
+#include <termios.h>
+//#include <asm/termios.h>
 
 
 int main(int argc, char const *argv[])
@@ -20,9 +20,17 @@ int main(int argc, char const *argv[])
 		
 		printf("ttyS0 open on %d\n", ttyS0);
 
-		/* raw mode, like Version 7 terminal driver */
-		cfmakeraw(&options);
-		options.c_cflag |= (CLOCAL | CREAD);
+		fcntl(fd, F_SETFL, 0);
+
+		/* get the current options */
+		tcgetattr(fd, &options);
+
+		/* set raw input, 1 character trigger */
+		options.c_cflag     |= (CLOCAL | CREAD);
+		options.c_lflag     &= ~(ICANON | ECHO | ECHOE | ISIG);
+		options.c_oflag     &= ~OPOST;
+		options.c_cc[VMIN]  = 1;
+		options.c_cc[VTIME] = 0;
 
 		/* set the options */
 		tcsetattr(ttyS0, TCSANOW, &options);
