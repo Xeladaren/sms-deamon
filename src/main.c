@@ -6,7 +6,7 @@
 #include <string.h>
 #include <termios.h>
 #include <sys/ioctl.h>
-
+#include <math.h>
 
 int main(int argc, char const *argv[])
 {
@@ -16,6 +16,8 @@ int main(int argc, char const *argv[])
 	if (ttyS0 > 0){
 
 		ssize_t size = 0 ;
+
+		double test = pow((double) ttyS0, 2.0) ;
 		
 		printf("ttyS0 open on %d\n", ttyS0);
 
