@@ -4,7 +4,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
-#include <termios.h>
+//#include <termios.h>
 #include <asm/termios.h>
 
 
