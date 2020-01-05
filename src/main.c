@@ -4,6 +4,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
+#include <termios.h>
+#include <sys/ioctl.h>
 
 
 int main(int argc, char const *argv[])
@@ -16,6 +18,17 @@ int main(int argc, char const *argv[])
 		ssize_t size = 0 ;
 		
 		printf("ttyS0 open on %d\n", ttyS0);
+
+		struct termios theTermios;
+
+		memset(&theTermios, 0, sizeof(struct termios));
+		cfmakeraw(&theTermios);
+		cfsetspeed(&theTermios, 115200);
+
+		theTermios.c_cflag = CREAD | CLOCAL | CS8 ;     // turn on READ
+		theTermios.c_cc[VMIN] = 0;
+		theTermios.c_cc[VTIME] = 10;     // 1 sec timeout
+		ioctl(ttyS0, TIOCSETA, &theTermios);
 
 		char writeMSG[5] = "AT\r\n" ;
 
