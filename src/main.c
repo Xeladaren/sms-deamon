@@ -5,8 +5,8 @@
 #include <unistd.h>
 #include <string.h>
 #include <termios.h>
-#include <sys/ioctl.h>
-#include <math.h>
+#include <asm/termios.h>
+
 
 int main(int argc, char const *argv[])
 {
