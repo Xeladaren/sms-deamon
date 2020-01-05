@@ -12,7 +12,7 @@ int main(int argc, char const *argv[])
 
 	if (ttyS0 > 0){
 		
-
+		printf("ttyS0 open on %d\n", ttyS0);
 
 
 		close(ttyS0) ;
@@ -20,8 +20,6 @@ int main(int argc, char const *argv[])
 	else{
 		printf("ERROR : open /dev/ttyS0 %d\n", ttyS0);
 	}
-
-	printf("Saluton Mondo !\n");
 
 	return 0;
 }
