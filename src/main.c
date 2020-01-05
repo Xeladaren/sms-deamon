@@ -16,13 +16,13 @@ int main(int argc, char const *argv[])
 		
 		printf("ttyS0 open on %d\n", ttyS0);
 
-		writeMSG[10] = "AT\r\n" ;
+		char writeMSG[10] = "AT\r\n" ;
 
 		size = write(ttyS0, writeMSG, 10) ;
 
 		printf("%d byte writed\n", size);
 
-		readMSG[100] ;
+		char readMSG[100] ;
 
 		size = read(ttyS0, readMSG, 100) ;
 
