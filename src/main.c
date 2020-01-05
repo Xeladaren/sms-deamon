@@ -48,7 +48,7 @@ int main(int argc, char const *argv[])
 
 			size = read(ttyS0, readMSG, 100) ;
 
-			printf("%s", size, readMSG);
+			printf("%s", readMSG);
 		}
 
 		close(ttyS0) ;
