@@ -35,9 +35,9 @@ int main(int argc, char const *argv[])
 		/* set the options */
 		tcsetattr(ttyS0, TCSANOW, &options);
 
-		char writeMSG[10] = "AT\r\n" ;
+		char writeMSG[100] = "AT+CGSN\r\n" ;
 
-		size = write(ttyS0, writeMSG, 10) ;
+		size = write(ttyS0, writeMSG, 100) ;
 
 		printf("%d byte writed : %s\n", size, writeMSG);
 
