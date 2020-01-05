@@ -11,9 +11,22 @@ int main(int argc, char const *argv[])
 	int ttyS0 = open("/dev/ttyS0", O_RDWR) ;
 
 	if (ttyS0 > 0){
+
+		ssize_t size = 0 ;
 		
 		printf("ttyS0 open on %d\n", ttyS0);
 
+		writeMSG[10] = "AT\r\n" ;
+
+		size = write(ttyS0, writeMSG, 10) ;
+
+		printf("%d byte writed\n", size);
+
+		readMSG[100] ;
+
+		size = read(ttyS0, readMSG, 100) ;
+
+		printf("%d byte read : %s\n", size, readMSG);
 
 		close(ttyS0) ;
 	}
