@@ -30,6 +30,8 @@ int main(int argc, char const *argv[])
 			size = read(ttyS0, readMSG, 100) ;
 
 			printf("%d byte read : %s\n", size, readMSG);
+
+			sleep(1);
 		}
 		
 
