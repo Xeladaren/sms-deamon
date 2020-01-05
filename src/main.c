@@ -42,12 +42,14 @@ int main(int argc, char const *argv[])
 		printf("%d byte writed : %s\n", size, writeMSG);
 
 		char readMSG[100] ;
-		memset(readMSG, 0, 100) ;
 
-		size = read(ttyS0, readMSG, 100) ;
+		while(1){
+			memset(readMSG, 0, 100) ;
 
-		printf("%d byte read : %s\n", size, readMSG);
-		
+			size = read(ttyS0, readMSG, 100) ;
+
+			printf("%d byte read : %s\n", size, readMSG);
+		}
 
 		close(ttyS0) ;
 	}
