@@ -25,7 +25,7 @@ int main(int argc, char const *argv[])
 		options.c_cflag |= (CLOCAL | CREAD);
 
 		/* set the options */
-		tcsetattr(fd, TCSANOW, &options);
+		tcsetattr(ttyS0, TCSANOW, &options);
 
 		char writeMSG[5] = "AT\r\n" ;
 
