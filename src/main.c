@@ -16,9 +16,9 @@ int main(int argc, char const *argv[])
 		
 		printf("ttyS0 open on %d\n", ttyS0);
 
-		char writeMSG[10] = "AT\r\n" ;
+		char writeMSG[5] = "AT\r\n" ;
 
-		size = write(ttyS0, writeMSG, 10) ;
+		size = write(ttyS0, writeMSG, 5) ;
 
 		printf("%d byte writed\n", size);
 
