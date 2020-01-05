@@ -3,6 +3,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <string.h>
 
 
 int main(int argc, char const *argv[])
@@ -23,6 +24,7 @@ int main(int argc, char const *argv[])
 		printf("%d byte writed\n", size);
 
 		char readMSG[100] ;
+		memset(readMSG, 0, 100) ;
 
 		size = read(ttyS0, readMSG, 100) ;
 
