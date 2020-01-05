@@ -20,10 +20,10 @@ int main(int argc, char const *argv[])
 		
 		printf("ttyS0 open on %d\n", ttyS0);
 
-		fcntl(fd, F_SETFL, 0);
+		fcntl(ttyS0, F_SETFL, 0);
 
 		/* get the current options */
-		tcgetattr(fd, &options);
+		tcgetattr(ttyS0, &options);
 
 		/* set raw input, 1 character trigger */
 		options.c_cflag     |= (CLOCAL | CREAD);
