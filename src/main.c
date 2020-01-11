@@ -9,8 +9,8 @@
 #include <pthread.h>
 //#include <asm/termios.h>
 
-int  ttyS0 ;
-bool threadRun = false ;
+int ttyS0 ;
+int threadRun = 0 ;
 
 void * readThreadFunction(void * param){
 
@@ -18,7 +18,7 @@ void * readThreadFunction(void * param){
 	char out ;
 	ssize_t size ;
 
-	threadRun = true ;
+	threadRun = 1 ;
 
 	while(threadRun){
 
@@ -39,8 +39,6 @@ int init(){
 	struct termios options;
 
 	if (ttyS0 > 0){
-
-		ssize_t size = 0 ;
 		
 		printf("ttyS0 open on %d\n", ttyS0);
 
@@ -59,10 +57,10 @@ int init(){
 		/* set the options */
 		tcsetattr(ttyS0, TCSANOW, &options);
 
-		return true ;
+		return 1 ;
 	}
 	else{
-		return false ;
+		return 0 ;
 	}
 }
 
@@ -70,7 +68,7 @@ int init(){
 int main(int argc, char const *argv[])
 {
 
-	bool run = true ;
+	bool run = 1 ;
 
 	while(run) {
 
@@ -83,13 +81,18 @@ int main(int argc, char const *argv[])
 
 	if (init()){
 
+		pthread_t readThread ;
+
 		pthread_create(&readThread, NULL, &readThreadFunction, NULL);
 
 //		char writeMSG[100] = "AT+CPIN=\"0000\"\r\n" ;
-		char writeMSG[100] = "AT+CPIN?\n\r" ;
+//		char writeMSG[100] = "AT+CPIN?\n\r" ;
 
 //		size = write(ttyS0, writeMSG, 100) ;
 
+		threadRun = 1 ;
+
+		pthread_join(readThread, NULL) ;
 
 		close(ttyS0) ;
 	}
