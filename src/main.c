@@ -35,7 +35,8 @@ int main(int argc, char const *argv[])
 		/* set the options */
 		tcsetattr(ttyS0, TCSANOW, &options);
 
-		char writeMSG[100] = "AT+CPIN=\"0000\"\r\n" ;
+//		char writeMSG[100] = "AT+CPIN=\"0000\"\r\n" ;
+		char writeMSG[100] = "AT+CPIN?\n\r" ;
 
 		size = write(ttyS0, writeMSG, 100) ;
 
