@@ -7,6 +7,7 @@
 #include <termios.h>
 #include <stdio.h>
 #include <pthread.h>
+#include <stdlib.h>
 //#include <asm/termios.h>
 
 int ttyS0 ;
