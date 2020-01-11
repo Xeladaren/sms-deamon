@@ -16,13 +16,12 @@ void * readThreadFunction(void * param){
 
 
 	char out ;
-	ssize_t size ;
 
 	threadRun = 1 ;
 
 	while(threadRun){
 
-		size = read(ttyS0, &out, 1) ;
+		read(ttyS0, &out, 1) ;
 
 		printf("%c", out);
 
@@ -74,9 +73,10 @@ int main(int argc, char const *argv[])
 
 		char command[100] ;
 
+		printf("> ");
 		scanf("%s\n", command) ;
 
-		printf("%s\n", command) ;
+		printf("-> %s\n", command) ;
 	}
 
 	if (init()){
