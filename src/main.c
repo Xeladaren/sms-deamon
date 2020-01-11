@@ -123,28 +123,31 @@ int main(int argc, char const *argv[])
 			else if(!strcmp("sms", command)){
 
 				char num[15] ;
-				char msg[125] ;
+				char msg[10] = "TEST SMS" ;
+				msg[8] = 0x1a ;
+				msg[9] = 0x00 ;
 
-				printf("NUMERO : ");
-				scanf("%s", num);
+				//printf("NUMERO : ");
+				//scanf("%s", num);
 				
-				printf("MESSAGE : ");
-				scanf("%s", msg);
+				//printf("MESSAGE : ");
+				//scanf("%s", msg);
 
-				write(ttyS0, "AT+CMGF=1\n\r", 15) ;
+				//write(ttyS0, "AT+CMGF=1\n\r", 15) ;
 
-				sleep(5) ;
+				//sleep(5) ;
 
-				sprintf(writeMSG, "AT+CMGS=%s\n\r", num);
+				//sprintf(writeMSG, "AT+CMGS=%s\n\r", num);
 
-				write(ttyS0, "AT+CMGS=0664491084\n\r", 102) ;
+				write(ttyS0, "AT+CMGS=0664491084\r", 20) ;
 
 				sleep(5) ;
 
 				char c = 0x1A ;
 
-				write(ttyS0, "TEST SMS", 10) ;
-				write(ttyS0, &c, 1) ;
+				printf("msg");
+
+				write(ttyS0, msg, 10) ;
 
 			}
 
