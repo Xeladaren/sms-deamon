@@ -52,7 +52,7 @@ int main(int argc, char const *argv[])
 
 			size = read(ttyS0, &out, 1) ;
 
-			printf("size = %d | \"%c\"\n", out);
+			printf("size = %d | \"%c\"\n", size, out);
 		}
 
 		close(ttyS0) ;
