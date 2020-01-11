@@ -84,15 +84,13 @@ int main(int argc, char const *argv[])
 			printf("> ");
 			scanf("%s", command) ;
 
-			command[99] = 0 ;
-
 			if(!strcmp("quit", command)){
 				printf("QUIT\n");
 
 				break ;
 			}
 
-			sscanf(writeMSG, "%s\n\r\0", command);
+			sscanf(writeMSG, "%s\n\r", command);
 
 			printf("command = |%s|\n", writeMSG);
 
