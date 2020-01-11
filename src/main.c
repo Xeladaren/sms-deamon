@@ -5,13 +5,37 @@
 #include <unistd.h>
 #include <string.h>
 #include <termios.h>
+#include <stdio.h>
+#include <pthread.h>
 //#include <asm/termios.h>
 
+int  ttyS0 ;
+bool threadRun = false ;
 
-int main(int argc, char const *argv[])
-{
-	
-	int ttyS0 = open("/dev/ttyS0", O_RDWR | O_NOCTTY | O_SYNC ) ;
+void * readThreadFunction(void * param){
+
+
+	char out ;
+	ssize_t size ;
+
+	threadRun = true ;
+
+	while(threadRun){
+
+		size = read(ttyS0, &out, 1) ;
+
+		printf("%c", out);
+
+	}
+
+    pthread_exit(NULL) ; // fermeture du thread.
+
+    return NULL ;
+}
+
+int init(){
+
+	ttyS0 = open("/dev/ttyS0", O_RDWR | O_NOCTTY | O_SYNC ) ;
 	struct termios options;
 
 	if (ttyS0 > 0){
@@ -35,26 +59,37 @@ int main(int argc, char const *argv[])
 		/* set the options */
 		tcsetattr(ttyS0, TCSANOW, &options);
 
+		return true ;
+	}
+	else{
+		return false ;
+	}
+}
+
+
+int main(int argc, char const *argv[])
+{
+
+	bool run = true ;
+
+	while(run) {
+
+		char command[100] ;
+
+		scanf("%s\n", command) ;
+
+		printf("%s\n", command) ;
+	}
+
+	if (init()){
+
+		pthread_create(&readThread, NULL, &readThreadFunction, NULL);
+
 //		char writeMSG[100] = "AT+CPIN=\"0000\"\r\n" ;
 		char writeMSG[100] = "AT+CPIN?\n\r" ;
 
-		size = write(ttyS0, writeMSG, 100) ;
+//		size = write(ttyS0, writeMSG, 100) ;
 
-		printf("%d byte writed : %s\n", size, writeMSG);
-
-		char readMSG[100] ;
-
-		size = 1 ;
-
-		char out ;
-
-		while(size > 0){
-			//memset(readMSG, 0, 100) ;
-
-			size = read(ttyS0, &out, 1) ;
-
-			printf("%c", out);
-		}
 
 		close(ttyS0) ;
 	}
