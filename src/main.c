@@ -67,16 +67,21 @@ int init(){
 int main(int argc, char const *argv[])
 {
 
-	int run = 1 ;
 
-	while(run) {
+	while(1) {
 
 		char command[100] ;
 
 		printf("> ");
 		scanf("%s", command) ;
 
-		printf("-> %s\n", command) ;
+		if(strncmp("quit", command)){
+			printf("QUIT\n");
+
+			break ;
+		}
+
+
 	}
 
 	if (init()){
