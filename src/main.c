@@ -86,7 +86,6 @@ int main(int argc, char const *argv[])
 			memset(command, 0, 100) ;
 			memset(writeMSG, 0, 102) ;
 
-			printf("> ");
 			scanf("%s", command) ;
 
 			if(!strcmp("quit", command)){
