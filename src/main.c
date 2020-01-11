@@ -99,7 +99,7 @@ int main(int argc, char const *argv[])
 
 				printf("PIN : ");
 				scanf("%s", pin);
-				sprintf(writeMSG, "AT+PIN=%s\n\r", pin);
+				sprintf(writeMSG, "AT+CPIN=%s\n\r", pin);
 
 				write(ttyS0, writeMSG, 102) ;
 
