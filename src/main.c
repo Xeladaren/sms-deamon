@@ -11,7 +11,7 @@
 int main(int argc, char const *argv[])
 {
 	
-	int ttyS0 = open("/dev/ttyS0", O_RDWR | O_NOCTTY | O_SYNC) ;
+	int ttyS0 = open("/dev/ttyS0", O_RDWR | O_NOCTTY | O_SYNC | O_NONBLOCK) ;
 	struct termios options;
 
 	if (ttyS0 > 0){
