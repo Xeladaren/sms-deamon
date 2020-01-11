@@ -141,7 +141,7 @@ int main(int argc, char const *argv[])
 
 				//sprintf(writeMSG, "AT+CMGS=%s\n\r", num);
 
-				write(ttyS0, "AT+CMGS=0664491084,129\r\n", 25) ;
+				write(ttyS0, "AT+CMGS=\"0664491084\"\r\n", 30) ;
 
 				sleep(5) ;
 
