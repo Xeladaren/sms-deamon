@@ -97,7 +97,7 @@ int main(int argc, char const *argv[])
 
 			sprintf(writeMSG, "%s\n\r", command);
 
-			printf("command = |%s|\n", writeMSG);
+			write(ttyS0, writeMSG, 102) ;
 
 		}
 
