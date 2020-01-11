@@ -131,19 +131,19 @@ int main(int argc, char const *argv[])
 				printf("MESSAGE : ");
 				scanf("%s", msg);
 
-				write(ttyS0, "AT+CMGF=1\n\r", 102) ;
+				write(ttyS0, "AT+CMGF=1\n\r", 15) ;
 
-				sleep(1) ;
+				sleep(5) ;
 
 				sprintf(writeMSG, "AT+CMGS=%s\n\r", num);
 
-				write(ttyS0, writeMSG, 102) ;
+				write(ttyS0, "AT+CMGS=0664491084\n\r", 102) ;
 
-				sleep(1) ;
+				sleep(5) ;
 
 				char c = 0x1A ;
 
-				write(ttyS0, msg, 125) ;
+				write(ttyS0, "TEST SMS", 10) ;
 				write(ttyS0, &c, 1) ;
 
 			}
