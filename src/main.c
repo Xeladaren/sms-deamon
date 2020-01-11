@@ -20,6 +20,8 @@ void * readThreadFunction(void * param){
 
 	threadRun = 1 ;
 
+	printf("Thread START\n");
+
 	while(threadRun){
 
 		read(ttyS0, &out, 1) ;
@@ -68,30 +70,33 @@ int init(){
 int main(int argc, char const *argv[])
 {
 
-
-	while(1) {
-
-		char command[100] ;
-
-		printf("> ");
-		scanf("%s", command) ;
-
-		if(!strcmp("quit", command)){
-			printf("QUIT\n");
-
-			break ;
-		}
-
-
-	}
-
-	exit(0) ;
-
 	if (init()){
 
 		pthread_t readThread ;
 
 		pthread_create(&readThread, NULL, &readThreadFunction, NULL);
+
+		while(1) {
+
+			char command[100] ;
+			char writeMSG[103]
+
+			printf("> ");
+			scanf("%s", command) ;
+
+			command[99] = 0 ;
+
+			if(!strcmp("quit", command)){
+				printf("QUIT\n");
+
+				break ;
+			}
+
+			sscanf(writeMSG, "%s\n\r\0", command);
+
+			printf("command = |%s|\n", writeMSG);
+
+		}
 
 //		char writeMSG[100] = "AT+CPIN=\"0000\"\r\n" ;
 //		char writeMSG[100] = "AT+CPIN?\n\r" ;
