@@ -75,7 +75,7 @@ int main(int argc, char const *argv[])
 		printf("> ");
 		scanf("%s", command) ;
 
-		if(strncmp("quit", command)){
+		if(strncmp("quit", command, 5)){
 			printf("QUIT\n");
 
 			break ;
