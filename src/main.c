@@ -79,7 +79,7 @@ int main(int argc, char const *argv[])
 		while(1) {
 
 			char command[100] ;
-			char writeMSG[103]
+			char writeMSG[103] ;
 
 			printf("> ");
 			scanf("%s", command) ;
