@@ -11,7 +11,7 @@
 int main(int argc, char const *argv[])
 {
 	
-	int ttyS0 = open("/dev/ttyS0", O_RDWR | O_NOCTTY | O_SYNC | O_NONBLOCK) ;
+	int ttyS0 = open("/dev/ttyS0", O_RDWR | O_NOCTTY | O_SYNC ) ;
 	struct termios options;
 
 	if (ttyS0 > 0){
@@ -52,7 +52,7 @@ int main(int argc, char const *argv[])
 
 			size = read(ttyS0, &out, 1) ;
 
-			printf("size = %d | \"%d\"\n", size, out);
+			printf("%c", out);
 		}
 
 		close(ttyS0) ;
