@@ -76,10 +76,15 @@ int main(int argc, char const *argv[])
 
 		pthread_create(&readThread, NULL, &readThreadFunction, NULL);
 
+		sleep(1) ;
+
 		while(1) {
 
 			char command[100] ;
-			char writeMSG[103] ;
+			char writeMSG[102] ;
+
+			memset(command, 0, 100) ;
+			memset(writeMSG, 0, 102) ;
 
 			printf("> ");
 			scanf("%s", command) ;
@@ -90,7 +95,7 @@ int main(int argc, char const *argv[])
 				break ;
 			}
 
-			sscanf(writeMSG, "%s\n\r", command);
+			sprintf(writeMSG, "%s\n\r", command);
 
 			printf("command = |%s|\n", writeMSG);
 
