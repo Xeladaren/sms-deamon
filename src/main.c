@@ -93,10 +93,32 @@ int main(int argc, char const *argv[])
 
 				break ;
 			}
+			else if(!strcmp("pin", command)){
 
-			sprintf(writeMSG, "%s\n\r", command);
+				char pin[4] ;
 
-			write(ttyS0, writeMSG, 102) ;
+				printf("PIN : ");
+				scanf("%s", pin);
+				sprintf(writeMSG, "AT+PIN=%s\n\r", command);
+
+				write(ttyS0, writeMSG, 102) ;
+
+			}
+			else if(!strcmp("custom", command)){
+
+				char custom[100] ;
+
+				printf("CUSTOM COMMEND : ");
+				scanf("%s", pin);
+				sprintf(writeMSG, "%s\n\r", command);
+
+				write(ttyS0, writeMSG, 102) ;
+
+			}
+
+			//sprintf(writeMSG, "%s\n\r", command);
+
+			
 
 		}
 
