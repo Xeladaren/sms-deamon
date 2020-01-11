@@ -93,6 +93,11 @@ int main(int argc, char const *argv[])
 
 				break ;
 			}
+			else if(!strcmp("pin?", command)){
+
+				write(ttyS0, "AT+CPIN?\n\r", 15) ;
+
+			}
 			else if(!strcmp("pin", command)){
 
 				char pin[4] ;
@@ -113,6 +118,33 @@ int main(int argc, char const *argv[])
 				sprintf(writeMSG, "%s\n\r", custom);
 
 				write(ttyS0, writeMSG, 102) ;
+
+			}
+			else if(!strcmp("sms", command)){
+
+				char num[15] ;
+				char msg[125] ;
+
+				printf("NUMERO : ");
+				scanf("%s", num);
+				
+				printf("MESSAGE : ");
+				scanf("%s", msg);
+
+				write(ttyS0, "AT+CMGF=1\n\r", 102) ;
+
+				sleep(1) ;
+
+				sprintf(writeMSG, "AT+CMGS=%s\n\r", num);
+
+				write(ttyS0, writeMSG, 102) ;
+
+				sleep(1) ;
+
+				char c = 0x1A ;
+
+				write(ttyS0, msg, 125) ;
+				write(ttyS0, &c, 1) ;
 
 			}
 
