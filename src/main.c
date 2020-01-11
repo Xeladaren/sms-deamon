@@ -68,7 +68,7 @@ int init(){
 int main(int argc, char const *argv[])
 {
 
-	bool run = 1 ;
+	int run = 1 ;
 
 	while(run) {
 
