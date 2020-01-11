@@ -74,7 +74,7 @@ int main(int argc, char const *argv[])
 		char command[100] ;
 
 		printf("> ");
-		scanf("%s\n", command) ;
+		scanf("%s", command) ;
 
 		printf("-> %s\n", command) ;
 	}
