@@ -99,7 +99,7 @@ int main(int argc, char const *argv[])
 
 				printf("PIN : ");
 				scanf("%s", pin);
-				sprintf(writeMSG, "AT+PIN=%s\n\r", command);
+				sprintf(writeMSG, "AT+PIN=%s\n\r", pin);
 
 				write(ttyS0, writeMSG, 102) ;
 
@@ -109,8 +109,8 @@ int main(int argc, char const *argv[])
 				char custom[100] ;
 
 				printf("CUSTOM COMMEND : ");
-				scanf("%s", pin);
-				sprintf(writeMSG, "%s\n\r", command);
+				scanf("%s", custom);
+				sprintf(writeMSG, "%s\n\r", custom);
 
 				write(ttyS0, writeMSG, 102) ;
 
