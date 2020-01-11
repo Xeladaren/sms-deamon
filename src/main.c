@@ -75,7 +75,7 @@ int main(int argc, char const *argv[])
 		printf("> ");
 		scanf("%s", command) ;
 
-		if(strncmp("quit", command, 5)){
+		if(strcmp("quit", command)){
 			printf("QUIT\n");
 
 			break ;
@@ -83,6 +83,8 @@ int main(int argc, char const *argv[])
 
 
 	}
+
+	exit(0) ;
 
 	if (init()){
 
@@ -95,9 +97,7 @@ int main(int argc, char const *argv[])
 
 //		size = write(ttyS0, writeMSG, 100) ;
 
-		threadRun = 1 ;
-
-		pthread_join(readThread, NULL) ;
+		pthread_cancel(readThread) ;
 
 		close(ttyS0) ;
 	}
