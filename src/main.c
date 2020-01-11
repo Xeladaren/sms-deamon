@@ -43,12 +43,16 @@ int main(int argc, char const *argv[])
 
 		char readMSG[100] ;
 
-		while(1){
-			memset(readMSG, 0, 100) ;
+		size = 1 ;
 
-			size = read(ttyS0, readMSG, 100) ;
+		char out ;
 
-			printf("%s", readMSG);
+		while(size > 0){
+			//memset(readMSG, 0, 100) ;
+
+			size = read(ttyS0, &out, 1) ;
+
+			printf("%c", out);
 		}
 
 		close(ttyS0) ;
