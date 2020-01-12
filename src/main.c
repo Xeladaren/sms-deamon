@@ -41,6 +41,8 @@ void * readThreadFunction(void * param){
 
 		read(ttyS0, &out, 1) ;
 
+		printf("%02X ", out);
+
 		if (out == '\n' && outOld != '\n'){
 
 			buffer[bufferIndex][index2] = out ;
