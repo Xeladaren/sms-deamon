@@ -166,7 +166,7 @@ int main(int argc, char const *argv[])
 								break ;
 							}
 						}
-						printf("\n", buffer[i]);
+						printf("\n");
 					}
 				}
 
