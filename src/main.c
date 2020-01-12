@@ -34,10 +34,8 @@ void * readThreadFunction(void * param){
 
 		if (buffer[bufferIndex] == NULL){
 
-			printf("coucou 1\n");
 			buffer[bufferIndex] = malloc(100) ;
 			memset(buffer[bufferIndex], 0, 100) ;
-			printf("coucou 2\n");
 
 		}
 
@@ -45,24 +43,20 @@ void * readThreadFunction(void * param){
 
 		if (out == '\n' && outOld != '\n'){
 
-			printf("%s\n", buffer[bufferIndex]);
+			//printf("%s\n", buffer[bufferIndex]);
 
 			bufferIndex = ( bufferIndex + 1 ) % 30 ;
 			index2 = 0 ;
 
-			if(buffer[bufferIndex] == NULL) {
-				printf("coucou 3\n");
+			if(buffer[bufferIndex] != NULL) {
 				memset(buffer[bufferIndex], 0, 100) ;
-				printf("coucou 4\n");
 			}
 
 		}
 		else if(out != '\n'){
 
-			printf("coucou 5 - %d - %d \n", bufferIndex, index2);
 			buffer[bufferIndex][index2] = out ;
 			index2 = ( index2 + 1 ) % 99 ;
-			printf("coucou 6\n");
 
 		}
 
