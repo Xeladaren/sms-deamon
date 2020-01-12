@@ -41,7 +41,8 @@ void * readThreadFunction(void * param){
 
 		read(ttyS0, &out, 1) ;
 
-		printf("%02X ", out);
+		if(out == 0) 
+			continue ;
 
 		if (out == '\n' && outOld != '\n'){
 
