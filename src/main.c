@@ -297,7 +297,14 @@ int main(int argc, char const *argv[])
 				char c = 0 ;
 
 				while(c != '>') {
+
+
 					pthread_mutex_lock(&bufferMutex) ;
+
+					if(!strcmp("ERROR", buffer[bufferIndex])){
+						goto quit ; // TODO : A CHANGER !!!!
+					}
+
 					c = buffer[bufferIndex][0] ;
 					pthread_mutex_unlock(&bufferMutex) ;
 
@@ -317,6 +324,8 @@ int main(int argc, char const *argv[])
 				send[msgLen+2] 	= 0 ;
 
 				write(ttyS0, send, msgLen+2) ;
+
+				quit:
 
 				free(send) ;
 
