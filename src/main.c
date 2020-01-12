@@ -134,9 +134,7 @@ int main(int argc, char const *argv[])
 			}
 			else if(!strcmp("buffer", command)){
 
-				for (int i = 0; i < 30; ++i)
-				{
-					buffer
+				for (int i = 0; i < 30; ++i) {
 
 					printf("%02d > ", i);
 
