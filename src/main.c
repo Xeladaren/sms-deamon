@@ -16,6 +16,7 @@ int ttyS0 ;
 int threadRun = 0 ;
 
 int bufferIndex = 0 ;
+pthread_mutex_t bufferMutex = PTHREAD_MUTEX_INITIALIZER ;
 char * buffer[30] ;
 
 
@@ -34,8 +35,12 @@ void * readThreadFunction(void * param){
 
 		if (buffer[bufferIndex] == NULL){
 
+			pthread_mutex_lock(&bufferMutex) ;
+
 			buffer[bufferIndex] = malloc(100) ;
 			memset(buffer[bufferIndex], 0, 100) ;
+
+			pthread_mutex_unlock(&bufferMutex) ;
 
 		}
 
@@ -52,24 +57,42 @@ void * readThreadFunction(void * param){
 
 				if (logFile != NULL) {
 					
+					pthread_mutex_lock(&bufferMutex) ;
+
 					fprintf(logFile, "%s\n", buffer[bufferIndex]) ;
+
+					pthread_mutex_unlock(&bufferMutex) ;
 
 					fclose(logFile) ;
 				}
 
 			}
 
+			pthread_mutex_lock(&bufferMutex) ;
+
 			bufferIndex = ( bufferIndex + 1 ) % 30 ;
+
+			pthread_mutex_unlock(&bufferMutex) ;
+
 			index2 = 0 ;
 
 			if(buffer[bufferIndex] != NULL) {
+				pthread_mutex_lock(&bufferMutex) ;
+
 				memset(buffer[bufferIndex], 0, 100) ;
+
+				pthread_mutex_unlock(&bufferMutex) ;
 			}
 
 		}
 		else if(out != '\n'){
 
+			pthread_mutex_lock(&bufferMutex) ;
+
 			buffer[bufferIndex][index2] = out ;
+
+			pthread_mutex_unlock(&bufferMutex) ;
+
 			index2 = ( index2 + 1 ) % 99 ;
 
 		}
@@ -257,11 +280,40 @@ int main(int argc, char const *argv[])
 				char num[] = "0664491084" ;
 				char msg[] = "TEST SMS" ;
 
+				size_t numLen = strlen(num) ;
+				size_t msgLen = strlen(msg) ;
 
-				sprintf(writeMSG, "AT+CMGS=\"%s\"\r%s%c\r\n", num, msg, SUB);
+				char * send = malloc(12+numLen) ;
 
+				memset(send, 0, 12+numLen) ;
+				sprintf(send, "AT+CMGS=\"%s\"\r", num);
 
-				write(ttyS0, writeMSG, 30) ;
+				write(ttyS0, send, 12+numLen) ;
+
+				char c = 0 ;
+
+				while(c != '>') {
+					pthread_mutex_lock(&bufferMutex) ;
+					char c = buffer[bufferIndex][0] ;
+					pthread_mutex_unlock(&bufferMutex) ;
+
+					printf("char = %c\n", c);
+
+					usleep(1000) ;
+				}
+
+				free(send) ;
+
+				send = malloc(msgLen+2);
+
+				memcpy(send, msgLen, msgLen);
+
+				send[msgLen] 	= SUB ;
+				send[msgLen+1] 	= 0 ;
+
+				write(ttyS0, send, msgLen+2) ;
+
+				free(send) ;
 
 				//sleep(5) ;
 
