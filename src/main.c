@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include <time.h>
+
 //#include <asm/termios.h>
 
 #define SUB 0x1a
@@ -247,13 +249,15 @@ int main(int argc, char const *argv[])
 			}
 			else if(!strcmp("hexCustom", command)){
 
-				char custom = 0 ;
+				unsigned int custom = 0 ;
 
 				printf("CUSTOM COMMEND : ");
 				scanf("%X", &custom);
 				//sprintf(writeMSG, "%s", custom);
 
-				write(ttyS0, &custom, 1) ;
+				char c = (char)custom ;
+
+				write(ttyS0, &c, 1) ;
 
 			}
 			else if(!strcmp("sms", command)){
@@ -306,7 +310,7 @@ int main(int argc, char const *argv[])
 
 				send = malloc(msgLen+2);
 
-				memcpy(send, msgLen, msgLen);
+				memcpy(send, msg, msgLen);
 
 				send[msgLen] 	= SUB ;
 				send[msgLen+1] 	= 0 ;
