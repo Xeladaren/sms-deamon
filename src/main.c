@@ -140,7 +140,7 @@ int main(int argc, char const *argv[])
 
 					printf("%02d > ", i);
 
-					if (buffer[i] == null) {
+					if (buffer[i] == NULL) {
 						printf("NULL\n");
 					}
 					else {
