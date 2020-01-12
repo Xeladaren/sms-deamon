@@ -137,7 +137,10 @@ int main(int argc, char const *argv[])
 
 				for (int i = 0; i < 30; ++i) {
 
-					printf("%02d > ", i);
+					if(i == bufferIndex)
+						printf("%02d-> ", i);
+					else
+						printf("%02d > ", i);
 
 					if (buffer[i] == NULL) {
 						printf("NULL\n");
