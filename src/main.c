@@ -46,6 +46,19 @@ void * readThreadFunction(void * param){
 
 		if (out == '\n' && outOld != '\n'){
 
+			if(buffer[bufferIndex] != NULL) {
+
+				FILE * logFile = fopen("./log.txt", "a") ;
+
+				if (logFile != NULL) {
+					
+					fprintf(logFile, "%s\n", buffer[bufferIndex]) ;
+
+					fclose(logFile) ;
+				}
+
+			}
+
 			bufferIndex = ( bufferIndex + 1 ) % 30 ;
 			index2 = 0 ;
 
