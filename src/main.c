@@ -15,10 +15,16 @@
 int ttyS0 ;
 int threadRun = 0 ;
 
+int bufferIndex = 0 ;
+char * buffer[30] ;
+
+
 void * readThreadFunction(void * param){
 
 
-	char out ;
+	char out ; 
+	char outOld = '\n' ;
+	int index2 = 0 ;
 
 	threadRun = 1 ;
 
@@ -26,9 +32,35 @@ void * readThreadFunction(void * param){
 
 	while(threadRun){
 
+		if (buffer[bufferIndex] == NULL){
+
+			buffer[bufferIndex] = malloc(100) ;
+			memset(buffer[bufferIndex], 0, 100) ;
+
+		}
+
 		read(ttyS0, &out, 1) ;
 
-		printf("%c", out);
+		if (out == '\n' && outOld != '\n'){
+
+			//printf("%s\n", buffer[bufferIndex]);
+
+			bufferIndex = ( bufferIndex + 1 ) % 30 ;
+			index2 = 0 ;
+
+			if(buffer[bufferIndex] == NULL)
+				memset(buffer[bufferIndex], 0, 100) ;
+
+		}
+		else if(out != '\n'){
+
+			buffer[bufferIndex][index2] = out ;
+			index2 = ( index2 + 1 ) % 99 ;
+
+		}
+
+		outOld = out ;
+		//printf("%c", out);
 
 	}
 
@@ -100,6 +132,23 @@ int main(int argc, char const *argv[])
 				write(ttyS0, "AT+CPIN?\n\r", 15) ;
 
 			}
+			else if(!strcmp("buffer", command)){
+
+				for (int i = 0; i < 30; ++i)
+				{
+					buffer
+
+					printf("%02d > ", i);
+
+					if (buffer[i] == null) {
+						printf("NULL\n");
+					}
+					else {
+						printf("%s\n", buffer[i]);
+					}
+				}
+
+			}
 			else if(!strcmp("pin", command)){
 
 				char pin[4] ;
@@ -152,11 +201,11 @@ int main(int argc, char const *argv[])
 
 				write(ttyS0, writeMSG, 30) ;
 
-				sleep(5) ;
+				//sleep(5) ;
 
-				printf("msg");
+				//printf("msg");
 
-				write(ttyS0, msg, 12) ;
+				//write(ttyS0, msg, 12) ;
 
 			}
 
