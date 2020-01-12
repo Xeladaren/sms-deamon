@@ -308,12 +308,13 @@ int main(int argc, char const *argv[])
 
 				free(send) ;
 
-				send = malloc(msgLen+2);
+				send = malloc(msgLen+3);
 
 				memcpy(send, msg, msgLen);
 
-				send[msgLen] 	= SUB ;
-				send[msgLen+1] 	= 0 ;
+				send[msgLen] 	= '\r' ;
+				send[msgLen+1] 	= SUB ;
+				send[msgLen+2] 	= 0 ;
 
 				write(ttyS0, send, msgLen+2) ;
 
