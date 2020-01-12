@@ -148,6 +148,29 @@ int main(int argc, char const *argv[])
 				}
 
 			}
+			else if(!strcmp("hexBuffer", command)){
+
+				for (int i = 0; i < 30; ++i) {
+
+					printf("%02d > ", i);
+
+					if (buffer[i] == NULL) {
+						printf("NULL\n");
+					}
+					else {
+						for (int j = 0; j < 100; ++j)
+						{
+							printf("%02X ", buffer[i][j]);
+							if (buffer[i][j] == 0)
+							{
+								break ;
+							}
+						}
+						printf("\n", buffer[i]);
+					}
+				}
+
+			}
 			else if(!strcmp("pin", command)){
 
 				char pin[4] ;
