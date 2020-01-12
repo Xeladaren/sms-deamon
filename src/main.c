@@ -192,6 +192,18 @@ int main(int argc, char const *argv[])
 
 				printf("CUSTOM COMMEND : ");
 				scanf("%s", custom);
+				sprintf(writeMSG, "%s\n\r", custom);
+
+				write(ttyS0, writeMSG, 102) ;
+
+			}
+			else if(!strcmp("strCustom", command)){
+
+				char custom[100] ;
+				memset(custom, 0, 100) ;
+
+				printf("CUSTOM COMMEND : ");
+				scanf("%s", custom);
 				sprintf(writeMSG, "%s", custom);
 
 				write(ttyS0, writeMSG, 102) ;
