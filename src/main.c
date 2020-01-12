@@ -298,7 +298,7 @@ int main(int argc, char const *argv[])
 
 				while(c != '>') {
 					pthread_mutex_lock(&bufferMutex) ;
-					char c = buffer[bufferIndex][0] ;
+					c = buffer[bufferIndex][0] ;
 					pthread_mutex_unlock(&bufferMutex) ;
 
 					printf("char = %c\n", c);
