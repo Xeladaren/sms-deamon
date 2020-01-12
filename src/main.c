@@ -43,6 +43,8 @@ void * readThreadFunction(void * param){
 
 		if (out == '\n' && outOld != '\n'){
 
+			buffer[bufferIndex][index2] = out ;
+
 			//printf("%s\n", buffer[bufferIndex]);
 
 			bufferIndex = ( bufferIndex + 1 ) % 30 ;
