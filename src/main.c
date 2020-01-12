@@ -46,10 +46,6 @@ void * readThreadFunction(void * param){
 
 		if (out == '\n' && outOld != '\n'){
 
-			buffer[bufferIndex][index2] = out ;
-
-			//printf("%s\n", buffer[bufferIndex]);
-
 			bufferIndex = ( bufferIndex + 1 ) % 30 ;
 			index2 = 0 ;
 
@@ -66,7 +62,6 @@ void * readThreadFunction(void * param){
 		}
 
 		outOld = out ;
-		//printf("%c", out);
 
 	}
 
@@ -178,7 +173,7 @@ int main(int argc, char const *argv[])
 			}
 			else if(!strcmp("pin", command)){
 
-				char pin[4] ;
+				char pin[5] ;
 
 				printf("PIN : ");
 				scanf("%s", pin);
@@ -190,12 +185,24 @@ int main(int argc, char const *argv[])
 			else if(!strcmp("custom", command)){
 
 				char custom[100] ;
+				memset(custom, 0, 100) ;
 
 				printf("CUSTOM COMMEND : ");
 				scanf("%s", custom);
-				sprintf(writeMSG, "%s\n\r", custom);
+				sprintf(writeMSG, "%s", custom);
 
 				write(ttyS0, writeMSG, 102) ;
+
+			}
+			else if(!strcmp("hexCustom", command)){
+
+				char custom = 0 ;
+
+				printf("CUSTOM COMMEND : ");
+				scanf("%X", custom);
+				//sprintf(writeMSG, "%s", custom);
+
+				write(ttyS0, custom, 1) ;
 
 			}
 			else if(!strcmp("sms", command)){
