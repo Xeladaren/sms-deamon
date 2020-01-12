@@ -10,6 +10,8 @@
 #include <stdlib.h>
 //#include <asm/termios.h>
 
+#define SUB 0x1a
+
 int ttyS0 ;
 int threadRun = 0 ;
 
@@ -122,12 +124,12 @@ int main(int argc, char const *argv[])
 			}
 			else if(!strcmp("sms", command)){
 
-				char num[15] ;
+				/*char num[15] ;
 				char msg[12] = "TEST SMS" ;
 				msg[8] = 0x1a ;
 				msg[9] = '\n' ;
 				msg[10] = '\r' ;
-				msg[11] = 0x00 ;
+				msg[11] = 0x00 ;*/
 
 				//printf("NUMERO : ");
 				//scanf("%s", num);
@@ -141,7 +143,14 @@ int main(int argc, char const *argv[])
 
 				//sprintf(writeMSG, "AT+CMGS=%s\n\r", num);
 
-				write(ttyS0, "AT+CMGS=\"0664491084\"\r\n", 30) ;
+				char num[] = "0664491084" ;
+				char msg[] = "TEST SMS" ;
+
+
+				sprintf(writeMSG, "AT+CMGS=\"%s\"\r%s%c\r\n", num, msg, SUB);
+
+
+				write(ttyS0, writeMSG, 30) ;
 
 				sleep(5) ;
 
