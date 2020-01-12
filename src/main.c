@@ -199,10 +199,10 @@ int main(int argc, char const *argv[])
 				char custom = 0 ;
 
 				printf("CUSTOM COMMEND : ");
-				scanf("%X", custom);
+				scanf("%X", &custom);
 				//sprintf(writeMSG, "%s", custom);
 
-				write(ttyS0, custom, 1) ;
+				write(ttyS0, &custom, 1) ;
 
 			}
 			else if(!strcmp("sms", command)){
