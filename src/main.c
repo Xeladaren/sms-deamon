@@ -308,7 +308,7 @@ int main(int argc, char const *argv[])
 					c = buffer[bufferIndex][0] ;
 					pthread_mutex_unlock(&bufferMutex) ;
 
-					printf("char = %c\n", c);
+					//printf("char = %c\n", c);
 
 					usleep(1000) ;
 				}
