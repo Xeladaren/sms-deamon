@@ -275,9 +275,9 @@ int main(int argc, char const *argv[])
 				//printf("MESSAGE : ");
 				//scanf("%s", msg);
 
-				//write(ttyS0, "AT+CMGF=1\n\r", 15) ;
+				write(ttyS0, "AT+CMGF=1\n\r", 15) ;
 
-				//sleep(5) ;
+				sleep(5) ;
 
 				//sprintf(writeMSG, "AT+CMGS=%s\n\r", num);
 
