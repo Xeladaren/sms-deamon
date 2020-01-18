@@ -319,11 +319,12 @@ int main(int argc, char const *argv[])
 
 				memcpy(send, msg, msgLen);
 
-				send[msgLen] 	= SUB ;
-				send[msgLen+1] 	= '\r' ;
-				send[msgLen+2] 	= 0 ;
+				send[msgLen] 	= '\r' ;
+				send[msgLen+1] 	= SUB ;
+				send[msgLen+2] 	= '\r' ;
+				send[msgLen+3] 	= 0 ;
 
-				write(ttyS0, send, msgLen+2) ;
+				write(ttyS0, send, msgLen+3) ;
 
 				quit:
 
