@@ -29,18 +29,16 @@ char * buffer[BUFF_SIZE] ; pthread_mutex_t bufferMutex = PTHREAD_MUTEX_INITIALIZ
 int SMSReady = 0 ;
 int CallReady = 0 ;
 
-// *** private propotype *** : 
+// *** private propotype *** :
 
 int findChemAfterIndex(char * chem, char * chemError, int index, int timeout, char * cmdReturn) ;
 int usleep(int usec);
 
 // *** public functions ***
 
+void * readThreadFunc(void * param) {
 
-void * readThreadFunc(void * param) 
-{
-
-	char out ; 
+	char out ;
 	char outOld = '\n' ;
 	int index2 = 0 ;
 
@@ -52,8 +50,7 @@ void * readThreadFunc(void * param)
 
 	pthread_mutex_unlock(&threadRunMutex) ;
 
-	while(threadRun)
-	{
+	while(threadRun) {
 
 		if (buffer[bufferIndex] == NULL){
 
@@ -68,19 +65,17 @@ void * readThreadFunc(void * param)
 
 		read(ttySMS, &out, 1) ;
 
-		if(out == 0) 
+		if(out == 0)
 			continue ;
 
-		if (out == '\n' && outOld != '\n')
-		{
+		if (out == '\n' && outOld != '\n') {
 
-			if(buffer[bufferIndex] != NULL) 
-			{
+			if(buffer[bufferIndex] != NULL) {
 
 				FILE * logFile = fopen("./log.txt", "a") ;
 
 				if (logFile != NULL) {
-					
+
 					pthread_mutex_lock(&bufferMutex) ;
 
 					fprintf(logFile, "%s\n", buffer[bufferIndex]) ;
@@ -94,16 +89,18 @@ void * readThreadFunc(void * param)
 
 				pthread_mutex_lock(&bufferMutex) ;
 
-				if (strstr(buffer[bufferIndex], "Call Ready"))
-				{
+				if (strstr(buffer[bufferIndex], "Call Ready")) {
+
 					printf("Call Ready !!\n");
 					CallReady = 1 ;
+
 				}
 
-				if (strstr(buffer[bufferIndex], "SMS Ready"))
-				{
+				if (strstr(buffer[bufferIndex], "SMS Ready")) {
+
 					printf("SMS Ready !!\n");
 					SMSReady = 1 ;
+
 				}
 
 				pthread_mutex_unlock(&bufferMutex) ;
@@ -119,16 +116,17 @@ void * readThreadFunc(void * param)
 			index2 = 0 ;
 
 			if(buffer[bufferIndex] != NULL) {
+
 				pthread_mutex_lock(&bufferMutex) ;
 
 				memset(buffer[bufferIndex], 0, STRING_SIZE) ;
 
 				pthread_mutex_unlock(&bufferMutex) ;
+
 			}
 
 		}
-		else if(out != '\n')
-		{
+		else if(out != '\n') {
 
 			pthread_mutex_lock(&bufferMutex) ;
 
@@ -148,110 +146,96 @@ void * readThreadFunc(void * param)
 
 }
 
-int initAT(char ttyFILE[]) 
-{
+int initAT(char ttyFILE[]) {
 
 	ttySMS = open(ttyFILE, O_RDWR | O_NOCTTY | O_SYNC ) ;
 	struct termios options;
 
-	if (ttySMS > 0)
-	{
-		
+	if (ttySMS > 0) {
+
 		printf("%s open on %d\n", ttyFILE, ttySMS);
 
 		fcntl(ttySMS, F_SETFL, 0);
 
-		// get the current options 
+		// get the current options
 		tcgetattr(ttySMS, &options);
 
-		// set raw input, 1 character trigger 
+		// set raw input, 1 character trigger
 		options.c_cflag     |= (CLOCAL | CREAD);
 		options.c_lflag     &= ~(ICANON | ECHO | ECHOE | ISIG);
 		options.c_oflag     &= ~OPOST;
 		options.c_cc[VMIN]  = 1;
 		options.c_cc[VTIME] = 0;
 
-		// set the options 
+		// set the options
 		tcsetattr(ttySMS, TCSANOW, &options);
 
 		pthread_create(&readThread, NULL, &readThreadFunc, NULL);
 
-		while(threadRun == 0)
-		{
+		while(threadRun == 0) {
+
 			usleep(100) ;
+
 		}
 
 		return 1 ;
 	}
 
-	else
-	{
+	else {
 		return 0 ;
 	}
 
 }
 
-int stopAT() 
-{
+int stopAT() {
 
 	pthread_cancel(readThread) ;
-
 	close(ttySMS) ;
 
 	return 1 ;
 
 }
 
-int isCallReadyAT()
-{
+int isCallReadyAT() {
 	return CallReady ;
 }
 
-int isSMSReadyAT()
-{
+int isSMSReadyAT() {
 	return SMSReady ;
 }
 
-int waitCallReady(int timeout)
-{
+int waitCallReady(int timeout) {
 
-	while(!isCallReadyAT() && timeout) // wait Call Ready
-	{
+	while(!isCallReadyAT() && timeout) {
 		timeout--;
 		usleep(1000) ;
 	}
 
-	if (timeout == 0)
-	{
+	if (timeout == 0) {
 		return -1 ;
 	}
-	else
-	{
+	else {
 		return 0 ;
 	}
 
 }
 
-int waitSMSReady(int timeout)
-{
-	while(!isSMSReadyAT() && timeout) // wait SMS Ready
-	{
+int waitSMSReady(int timeout) {
+
+	while(!isSMSReadyAT() && timeout) {
 		timeout--;
 		usleep(1000) ;
 	}
 
-	if (timeout == 0)
-	{
+	if (timeout == 0) {
 		return -1 ;
 	}
-	else
-	{
+	else {
 		return 0 ;
 	}
 }
 
-PinStat pinStatusAT() 
-{
+PinStat pinStatusAT() {
 
 	int lastBufferIndex = bufferIndex ;
 
@@ -284,18 +268,16 @@ PinStat pinStatusAT()
 
 	else
 		returnStat = UNKNOWN ;
-	
+
 
 	return returnStat ;
 }
 
-PinStat setPinAT(char pin[], int timeout)
-{	
+PinStat setPinAT(char pin[], int timeout) {
 
 	PinStat returnStat = pinStatusAT() ;
 
-	if (returnStat == SIM_PIN || returnStat == SIM_PIN2)
-	{
+	if (returnStat == SIM_PIN || returnStat == SIM_PIN2) {
 
 		// make write cmd
 
@@ -341,21 +323,18 @@ PinStat setPinAT(char pin[], int timeout)
 
 	}
 
-	
+
 	return returnStat ;
 
 }
 
 // *** private function ***
 
-int findChemAfterIndex(char * chem, char * chemError, int index, int timeout, char * cmdReturn)
-{
+int findChemAfterIndex(char * chem, char * chemError, int index, int timeout, char * cmdReturn) {
 
-	while(timeout)
-	{	
+	while(timeout) {
 
-		if(index != bufferIndex)
-		{
+		if(index != bufferIndex) {
 
 			int searchIndex = ( bufferIndex - 1 ) % BUFF_SIZE ;
 
@@ -390,8 +369,8 @@ int findChemAfterIndex(char * chem, char * chemError, int index, int timeout, ch
 			}
 
 		}
-		
-		usleep(1000) ;	
+
+		usleep(1000) ;
 		timeout-- ;
 	}
 

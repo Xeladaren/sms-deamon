@@ -3,8 +3,7 @@
 
 #include "at.h"
 
-int main(int argc, char const *argv[])
-{
+int main(int argc, char const *argv[]) {
 
 	initAT("/dev/ttyS0");
 
@@ -12,9 +11,8 @@ int main(int argc, char const *argv[])
 
 	printf("pinStat = %d\n", pinStat);
 
-	if (pinStat != READY)
-	{
-		
+	if (pinStat != READY) {
+
 		pinStat = setPinAT("0000", 10000) ;
 
 		printf("pinStat = %d\n", pinStat);
