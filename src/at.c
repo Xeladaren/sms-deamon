@@ -267,8 +267,6 @@ PinStat pinStatusAT()
 	if(findChemAfterIndex("+CPIN:", NULL, lastBufferIndex, 1000, cmd) == -1)
 		return ERROR ;
 
-	printf("CMD = %s\n", cmd);
-
 	if (strstr(cmd, "READY"))
 		returnStat = READY ;
 
@@ -315,9 +313,6 @@ PinStat setPinAT(char pin[], int timeout)
 
 		// wait return
 
-		if(findChemAfterIndex("AT+CPIN=", NULL, lastBufferIndex, 1000, NULL) == -1)
-			return ERROR ;
-
 		if(findChemAfterIndex("OK", "ERROR", lastBufferIndex, 1000, NULL) == -1)
 			return ERROR ;
 
@@ -325,8 +320,6 @@ PinStat setPinAT(char pin[], int timeout)
 
 		if(findChemAfterIndex("+CPIN:", NULL, lastBufferIndex, 1000, cmd) == -1)
 			return ERROR ;
-
-		printf("CMD = %s\n", cmd);
 
 		if (strstr(cmd, "READY"))
 			returnStat = READY ;
