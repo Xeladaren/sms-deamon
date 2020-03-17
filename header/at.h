@@ -1,6 +1,8 @@
 #include <time.h>
 
-typedef enum pinStat {ERROR, READY, SIM_PIN, SIM_PIN2, SIM_PUK, SIM_PUK2, UNKNOWN} PinStat ;
+typedef enum pinStatus {SIN_ERROR, SIN_READY, SIM_PIN, SIM_PIN2, SIM_PUK, SIM_PUK2, SIM_UNKNOWN} PinStatus ;
+
+typedef enum phoneStatus {PHONE_READY, PHONE_UNAVAILABLE, PHONE_UNKNOWN, PHONE_RINGING, PHONE_CALL} PhoneStatus ;
 
 typedef struct
 {
@@ -12,7 +14,7 @@ typedef struct
 } SMS;
 
 
-int initAT(char ttyFILE[]) ;
+int initAT(char ttyFILE[], int timeout) ;
 
 int stopAT() ;
 
@@ -24,6 +26,12 @@ int waitCallReady(int timeout) ;
 
 int waitSMSReady(int timeout) ;
 
-PinStat pinStatusAT() ;
+PinStatus getPinStatusAT() ;
 
-PinStat setPinAT(char pin[], int timeout) ;
+PhoneStatus getPhoneStatusAT() ;
+
+PinStatus setPinAT(char pin[], int timeout) ;
+
+int setSMSConfig() ;
+
+int writeCustomCmd(char cmd[], int size) ;

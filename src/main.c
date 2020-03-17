@@ -1,25 +1,55 @@
 #include <string.h>
+#include <strings.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <signal.h>
 
 #include "at.h"
 
+void stop(int signal) {
+
+	printf("stop sms-deamon (%d)\n", signal);
+	stopAT();
+
+	exit(0);
+
+}
+
 int main(int argc, char const *argv[]) {
 
-	initAT("/dev/ttyS0");
+	signal(SIGINT, stop);
+	signal(SIGKILL, stop);
 
-	PinStat pinStat = pinStatusAT() ;
+	if (initAT("/dev/ttyS0", 1000) == 0) {
 
-	printf("pinStat = %d\n", pinStat);
+		if (setPinAT("0000", 10000) == SIN_READY) {
 
-	if (pinStat != READY) {
+			printf("init ok !!\n");
 
-		pinStat = setPinAT("0000", 10000) ;
+			waitCallReady(1000);
 
-		printf("pinStat = %d\n", pinStat);
+			waitSMSReady(1000);
 
-		waitCallReady(10000);
+			setSMSConfig();
 
-		waitSMSReady(10000);
+			printf("Start main loop !!\n");
+			while (1) {
+
+				char command[100] ;
+				char writeMSG[103] ;
+				memset(writeMSG, 0, 103) ;
+
+
+				scanf("%s", command) ;
+
+				sprintf(writeMSG, "%s\n\r", command);
+
+				writeCustomCmd(writeMSG, strlen(writeMSG));
+
+			}
+
+		}
 
 	}
 
