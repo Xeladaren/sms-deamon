@@ -31,14 +31,14 @@ pthread_t newSMSThread ;
 int bufferIndex = 0 ;
 char * buffer[BUFF_SIZE] ; pthread_mutex_t bufferMutex = PTHREAD_MUTEX_INITIALIZER ;
 
-int rawBufferIndex = 0 ;
-char rawBuffer[RAW_BUFFER_SIZE] ; pthread_mutex_t rawBufferMutex = PTHREAD_MUTEX_INITIALIZER ;
+pthread_mutex_t ttyMutex = PTHREAD_MUTEX_INITIALIZER ;
 
 int SMSReady = 0 ;
 int CallReady = 0 ;
 
 // *** private propotype *** :
 
+int sendCmd(char cmd[]) ;
 void * readThreadFunc(void * param) ;
 void * newSMSThreadFunc(void * param) ;
 int setPreferredMessageStorage() ;
@@ -158,7 +158,7 @@ PinStatus getPinStatusAT() {
 
 	int lastBufferIndex = bufferIndex ;
 
-	write(ttySMS, "AT+CPIN?\n\r", 15) ;
+	sendCmd("AT+CPIN?\n\r") ;
 
 	PinStatus returnStat = SIN_ERROR ;
 
@@ -195,7 +195,7 @@ PinStatus getPinStatusAT() {
 PhoneStatus getPhoneStatusAT() {
 	int lastBufferIndex = bufferIndex ;
 
-	write(ttySMS, "AT+CPAS\n\r", 15) ;
+	sendCmd("AT+CPAS\n\r") ;
 
 	PhoneStatus returnStat = PHONE_UNKNOWN ;
 
@@ -240,17 +240,13 @@ PinStatus setPinAT(char pin[], int timeout) {
 
 		// make write cmd
 
-		char * writeMSG ;
-
 		int lastBufferIndex = bufferIndex ;
 
-		writeMSG = malloc(11+strlen(pin)) ;
+		char writeMSG[11+strlen(pin)] ;
 
 		sprintf(writeMSG, "AT+CPIN=%s\n\r", pin);
 
-		write(ttySMS, writeMSG, 11+strlen(pin)) ;
-
-		free(writeMSG) ;
+		sendCmd(writeMSG);
 
 		// wait return
 
@@ -297,24 +293,32 @@ int setSMSConfig() {
 		return -1 ;
 	}
 
-	if(setShowTextModeParameters() == -1) {
-		return -1 ;
-	}
-
 	return 0 ;
 }
 
 int writeCustomCmd(char cmd[], int size) {
 
-	write(ttySMS, cmd, size) ;
-
+	sendCmd(cmd) ;
 	return 0 ;
 
 }
 
 // *** private function ***
 
+int sendCmd(char cmd[]) {
+
+	pthread_mutex_lock(&ttyMutex) ;
+
+	write(ttySMS, cmd, strlen(cmd)) ;
+
+	pthread_mutex_unlock(&ttyMutex) ;
+
+	return 0 ;
+}
+
 void * readThreadFunc(void * param) {
+
+	pthread_mutex_lock(&ttyMutex) ;
 
 	char out ;
 	char outOld = '\n' ;
@@ -341,14 +345,11 @@ void * readThreadFunc(void * param) {
 
 		}
 
+		pthread_mutex_unlock(&ttyMutex) ;
+
 		read(ttySMS, &out, 1) ;
 
-		pthread_mutex_lock(&rawBufferMutex) ;
-
-		rawBuffer[rawBufferIndex] = out ;
-		rawBufferIndex = ( rawBufferIndex + 1 ) % RAW_BUFFER_SIZE ;
-
-		pthread_mutex_unlock(&rawBufferMutex) ;
+		pthread_mutex_lock(&ttyMutex) ;
 
 		if(out == 0)
 			continue ;
@@ -463,22 +464,7 @@ int setPreferredMessageStorage() {
 
 	int lastBufferIndex = bufferIndex ;
 
-	write(ttySMS, "AT+CPMS=\"SM\",\"SM\",\"SM\"\n\r", 25) ;
-
-	if(findChemAfterIndex("OK", "ERROR", lastBufferIndex, 1000, NULL) == -1)
-		return -1 ;
-
-	return 0 ;
-
-}
-
-int setShowTextModeParameters() {
-
-	printf("set Show Text Mode Parameters !!\n");
-
-	int lastBufferIndex = bufferIndex ;
-
-	write(ttySMS, "AT+CSDH=1\n\r", 12) ;
+	sendCmd("AT+CPMS=\"SM\",\"SM\",\"SM\"\n\r") ;
 
 	if(findChemAfterIndex("OK", "ERROR", lastBufferIndex, 1000, NULL) == -1)
 		return -1 ;
@@ -493,7 +479,7 @@ int setMessageFormat() {
 
 	int lastBufferIndex = bufferIndex ;
 
-	write(ttySMS, "AT+CMGF=1\n\r", 12) ;
+	sendCmd("AT+CMGF=0\n\r") ;
 
 	if(findChemAfterIndex("OK", "ERROR", lastBufferIndex, 1000, NULL) == -1)
 		return -1 ;
@@ -510,17 +496,12 @@ int readSMSinMemory(int addr) {
 		memset(writeMSG, 0, 13) ;
 
 		sprintf(writeMSG, "AT+CMGR=%d\n\r", addr) ;
-		printf("del msg in %d\n", addr);
 
 		pthread_mutex_lock(&bufferMutex);
 		int lastBufferIndex = bufferIndex ;
 		pthread_mutex_unlock(&bufferMutex);
 
-		pthread_mutex_lock(&rawBufferMutex) ;
-		int lastRawBufferIndex = rawBufferIndex ;
-		pthread_mutex_unlock(&rawBufferMutex) ;
-
-		write(ttySMS, writeMSG, 13) ;
+		sendCmd(writeMSG) ;
 
 		int indexOK = findChemAfterIndex("OK", "ERROR", lastBufferIndex, 1000, NULL) ;
 
@@ -531,86 +512,35 @@ int readSMSinMemory(int addr) {
 
 			if (indexCMGR != -1) {
 
-				char * cmdCursor = cmdReturn ;
+				int PDUIndex = ( indexCMGR + 1 ) % BUFF_SIZE ;
 
-				cmdCursor = index(cmdCursor, ',') + 1 ;
+				char * PDUstr = NULL ;
 
-				char num[20] ;
+				pthread_mutex_lock(&bufferMutex);
 
-				if (cmdCursor != NULL) {
-					strncpy(num, cmdCursor + 1, index(cmdCursor, ',') - cmdCursor - 2) ;
-				}
+				PDUstr = (char*) malloc(strlen(buffer[PDUIndex])+1) ;
+				strcpy(PDUstr, buffer[PDUIndex]) ;
 
-				cmdCursor = index(cmdCursor, ',') + 1 ;
-				cmdCursor = index(cmdCursor, ',') + 1 ;
+				pthread_mutex_unlock(&bufferMutex);
 
-				char date[25] ;
-				memset(date, 0, 25);
+				printf("PDU = %s\n", PDUstr);
 
-				if (cmdCursor != NULL) {
-					strncpy(date, cmdCursor + 1, 20) ;
-				}
-
-				time_t timeEpoch = parseDate(date) ;
-
-				cmdCursor = index(cmdCursor, ',') + 1 ;
-				cmdCursor = index(cmdCursor, ',') + 1 ;
-				cmdCursor = index(cmdCursor, ',') + 1 ;
-				cmdCursor = index(cmdCursor, ',') + 1 ;
-				cmdCursor = index(cmdCursor, ',') + 1 ;
-
-				printf("cmdCursor : %s\n", cmdCursor);
-
-				int protocol = -1 ;
-
-				// Portocol List :
-				// 0 = SMS - Simple Text
-				// 4 = MMS
-				// 8 = SMS - UNICODE
-
-				if (cmdCursor[0] == '0') {
-					protocol = 0 ;
-				}
-				else if (cmdCursor[0] == '8') {
-					protocol = 8 ;
-				}
-
-				cmdCursor = index(cmdCursor, ',') + 1 ;
-				cmdCursor = index(cmdCursor, ',') + 1 ;
-				cmdCursor = index(cmdCursor, ',') + 1 ;
-
-				char charDataSize[5];
-				memset(charDataSize, 0, 5);
-
-				if (cmdCursor != NULL) {
-					strcpy(charDataSize, cmdCursor) ;
-				}
-
-				int dataSize = 0 ;
-
-				sscanf(charDataSize, "%d", &dataSize);
-
-				char data[dataSize+1] ;
-				memset(data, 0, dataSize+1) ;
-
-				pthread_mutex_lock(&rawBufferMutex) ;
-
-				lastRawBufferIndex += strlen(cmdReturn) + 16 ;
-
-				for (size_t i = 0; i < dataSize; i++) {
-					int pos = ( lastRawBufferIndex + i ) % RAW_BUFFER_SIZE ;
-					data[i] = rawBuffer[pos];
-				}
-
-				pthread_mutex_unlock(&rawBufferMutex) ;
-
-				printf("RAW DATA : %s\n", data);
+				/*
 
 				if(protocol == 0){
 
 					// TODO : use string data
 
-					
+					SMS newSMS ;
+
+					newSMS.date = timeEpoch ;
+					strncpy(newSMS.sender, senderNum, 15);
+					strncpy(newSMS.msg, data, 160);
+
+					printf("SENDER : %s\n", newSMS.sender);
+					printf("TIME : %ld\n", newSMS.date);
+					printf("MSG : \n%s\n---\n", newSMS.msg);
+
 
 				}
 				else if (protocol == 4) {
@@ -635,6 +565,8 @@ int readSMSinMemory(int addr) {
 					// TODO : use unicode data.
 
 				}
+
+				*/
 
 				return 0 ;
 
@@ -662,7 +594,7 @@ int delSMSinMemory(int addr) {
 
 		int lastBufferIndex = bufferIndex ;
 
-		write(ttySMS, writeMSG, 13) ;
+		sendCmd(writeMSG) ;
 
 		if(findChemAfterIndex("OK", "ERROR", lastBufferIndex, 1000, NULL) == -1)
 			return -1 ;
