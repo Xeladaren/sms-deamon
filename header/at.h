@@ -8,8 +8,11 @@ typedef struct
 {
 
    time_t date ;
-   char sender[15] ;
-   char msg[160] ;
+   size_t senderSize ;
+   size_t msgSize ;
+   char * sender ;
+   char * msg ;
+   char * PDU ;
 
 } SMS;
 
@@ -35,3 +38,9 @@ PinStatus setPinAT(char pin[], int timeout) ;
 int setSMSConfig() ;
 
 int writeCustomCmd(char cmd[], int size) ;
+
+int setNewSMSFunction(void (*function)(SMS *)) ;
+
+void printSMS(SMS * sms) ;
+
+void freeSMS(SMS * sms) ;

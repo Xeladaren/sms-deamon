@@ -4,6 +4,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <signal.h>
+#include <errno.h>
+
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <fcntl.h>
 
 #include "at.h"
 
@@ -13,6 +18,32 @@ void stop(int signal) {
 	stopAT();
 
 	exit(0);
+
+}
+
+void newSMS(SMS * sms){
+
+	printSMS(sms) ;
+
+	int ret = mkdir("sms", 0755) ;
+
+	if (ret == 0 || errno == EEXIST) {
+
+		char fileName[100] ;
+		sprintf(fileName, "sms/%ld%s.txt", sms->date, sms->sender) ;
+
+		FILE * file = fopen(fileName, "w") ;
+
+		fprintf(file, "%s\n", sms->PDU);
+		fprintf(file, "%ld\n", sms->date);
+		fprintf(file, "%s\n", sms->sender);
+		fprintf(file, "%s\n", sms->msg);
+
+		fclose(file) ;
+
+	}
+
+	freeSMS(sms);
 
 }
 
@@ -32,6 +63,8 @@ int main(int argc, char const *argv[]) {
 			waitSMSReady(1000);
 
 			setSMSConfig();
+
+			setNewSMSFunction(&newSMS);
 
 			printf("Start main loop !!\n");
 			while (1) {

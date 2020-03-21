@@ -12,6 +12,7 @@
 #include <wchar.h>
 
 #include "at.h"
+#include "pdu-decode.h"
 
 #define SUB 0x1a
 
@@ -36,8 +37,11 @@ pthread_mutex_t ttyMutex = PTHREAD_MUTEX_INITIALIZER ;
 int SMSReady = 0 ;
 int CallReady = 0 ;
 
+void (*newSMSFunction)(SMS *) = NULL ;
+
 // *** private propotype *** :
 
+int unicodeToUTF8(unsigned int unicodeChar, char outUTF8[] ) ;
 int sendCmd(char cmd[]) ;
 void * readThreadFunc(void * param) ;
 void * newSMSThreadFunc(void * param) ;
@@ -303,6 +307,44 @@ int writeCustomCmd(char cmd[], int size) {
 
 }
 
+int setNewSMSFunction(void (*function)(SMS *)) {
+	newSMSFunction = function ;
+
+	if(newSMSFunction)
+		return 0 ;
+	else
+		return -1 ;
+}
+
+void printSMS(SMS * sms) {
+
+	printf("NUM : %s\n", sms->sender);
+
+	time_t date = sms->date ;
+
+	struct tm * dateTM = gmtime(&date) ;
+
+	printf("DATE : %02d/%02d/%04d %02d:%02d:%02d UTC\n",
+		dateTM->tm_mday,
+		dateTM->tm_mon,
+		dateTM->tm_year + 1900,
+		dateTM->tm_hour,
+		dateTM->tm_min,
+		dateTM->tm_sec
+	);
+
+	printf("MSG : \n%s\n____\n", sms->msg);
+
+
+}
+
+void freeSMS(SMS * sms) {
+	free(sms->sender);
+	free(sms->msg);
+	free(sms->PDU);
+	free(sms);
+}
+
 // *** private function ***
 
 int sendCmd(char cmd[]) {
@@ -381,16 +423,13 @@ void * readThreadFunc(void * param) {
 					CallReady = 1 ;
 
 				}
-
-				if (strstr(buffer[bufferIndex], "SMS Ready")) {
+				else if (strstr(buffer[bufferIndex], "SMS Ready")) {
 
 					printf("SMS Ready !!\n");
 					SMSReady = 1 ;
 
 				}
-
-
-				if (strstr(buffer[bufferIndex], "+CMTI:")) {
+				else if (strstr(buffer[bufferIndex], "+CMTI:")) {
 
 					printf("New SMS !!\n");
 
@@ -398,6 +437,19 @@ void * readThreadFunc(void * param) {
 					strncpy(cmd, buffer[bufferIndex], STRING_SIZE) ;
 
 					pthread_create(&newSMSThread, NULL, &newSMSThreadFunc, (void *) cmd);
+
+				}
+				else if (strstr(buffer[bufferIndex], "+CMTI:")) {
+
+					printf("New SMS !!\n");
+
+					char * cmd = malloc(STRING_SIZE) ;
+					strncpy(cmd, buffer[bufferIndex], STRING_SIZE) ;
+
+					pthread_create(&newSMSThread, NULL, &newSMSThreadFunc, (void *) cmd);
+
+				}
+				else if (strstr(buffer[bufferIndex], "RING")) {
 
 				}
 
@@ -523,7 +575,88 @@ int readSMSinMemory(int addr) {
 
 				pthread_mutex_unlock(&bufferMutex);
 
-				printf("PDU = %s\n", PDUstr);
+
+				int SMSCenterAddrLen = 0 ; // SMS Center Addrese len.
+				int cursor = 0 ;
+
+				sscanf(PDUstr, "%02X", &SMSCenterAddrLen) ;
+
+				cursor += 2 + (SMSCenterAddrLen * 2) + 2 ;
+
+				int SMSSenderAddrLen ;
+
+				sscanf(&PDUstr[cursor], "%02X", &SMSSenderAddrLen) ;
+				cursor += 2 ;
+
+				int PDUSenderLen = 2+SMSSenderAddrLen ;
+
+				if (PDUSenderLen % 2)
+					PDUSenderLen++ ;
+
+				char PDUSenderAddr[PDUSenderLen+1] ;
+				PDUSenderAddr[PDUSenderLen] = '\0' ;
+				memcpy(PDUSenderAddr, &PDUstr[cursor], PDUSenderLen) ;
+
+				// '+' + num len + '\0' ending
+				char * senderNum = (char *) malloc(1+SMSSenderAddrLen+1) ;
+
+				PDUDecodeNumber(PDUSenderAddr, senderNum) ;
+
+				// PDUSenderLen + '\0' ending
+				cursor += PDUSenderLen ;
+
+				unsigned char ProtocolID = 0 ;
+				sscanf(&PDUstr[cursor], "%02hhX", &ProtocolID) ;
+				cursor += 2 ;
+
+				unsigned char dataCodingID = 0 ;
+				sscanf(&PDUstr[cursor], "%02hhX", &dataCodingID) ;
+				cursor += 2 ;
+
+				char PDUdate[15] ;
+				time_t date = 0 ;
+				memcpy(PDUdate, &PDUstr[cursor], 14);
+				PDUdate[14] = 0 ;
+				PDUDecodeTime(PDUdate, &date);
+				cursor += 14 ;
+
+				int dataLen = 0 ;
+				sscanf(&PDUstr[cursor], "%02X", &dataLen) ;
+				cursor += 2 ;
+
+				char * smsText ;
+
+				if (dataCodingID == 0x00) {
+					smsText = (char *) malloc(dataLen*2) ; // allocate more for potential special character.
+					memset(smsText, 0, dataLen*2);
+					PDUDecodeData7b(&PDUstr[cursor], smsText, dataLen) ;
+				}
+				else if (dataCodingID == 0x04) {
+					smsText = (char *) malloc(19);
+					strcpy(smsText, "MMS unsuported now") ;
+				}
+				else if (dataCodingID == 0x08) {
+					smsText = (char *) malloc((dataLen*2)+1) ;
+					PDUDecodeDataUnicode(&PDUstr[cursor], smsText);
+				}
+				else {
+					smsText = (char *) malloc(20);
+					strcpy(smsText, "unsuported msg type") ;
+				}
+
+
+				SMS * sms = (SMS *) malloc(sizeof(SMS)) ;
+
+				sms->date = date ;
+				sms->senderSize = 1+SMSSenderAddrLen+1 ;
+				sms->msgSize = dataLen+1 ;
+				sms->sender = senderNum ;
+				sms->msg = smsText ;
+				sms->PDU = PDUstr ;
+
+				if (newSMSFunction) {
+					(*newSMSFunction)(sms);
+				}
 
 				/*
 

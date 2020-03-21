@@ -4,6 +4,13 @@
 #include <time.h>
 
 #include "pdu-decode.h"
+#include "gsm-char-set.h"
+
+// ** Private Prototype ***
+
+int unicodeToUTF8(unsigned int unicodeChar, char outUTF8[] ) ;
+
+// ** Public functions ***
 
 int PDUDecodeNumber(char inputData[], char outputData[]) {
 
@@ -22,16 +29,23 @@ int PDUDecodeNumber(char inputData[], char outputData[]) {
             outputData[i-2] = inputData[i] ;
          else
             outputData[i-2] = 0 ;
+      }
+
+   }
+   else if(strncmp(inputData, "A1", 2) == 0) {
+
+      for (size_t i = 3; i < strlen(inputData); i+=2) {
+
+         outputData[i-2] = inputData[i-1] ;
+         outputData[i-3] = inputData[i] ;
 
       }
 
    }
 
-   return 0;
+   return 0 ;
 
 }
-
-// 02308181744040
 
 int PDUDecodeTime(char inputData[], time_t * date) {
 
@@ -79,7 +93,7 @@ int PDUDecodeTime(char inputData[], time_t * date) {
    return 0 ;
 }
 
-int PDUDecodeData(char inputData[], char outputData[], size_t outputSize) {
+int PDUDecodeData7b(char inputData[], char outputData[], size_t charCount) {
 
    size_t dataInSize = strlen(inputData) / 2 ;
    unsigned char dataIN[dataInSize] ;
@@ -95,10 +109,11 @@ int PDUDecodeData(char inputData[], char outputData[], size_t outputSize) {
 
    }
 
-   memset(outputData, 0, outputSize) ;
+   outputData[0] = 0 ;
 
+   int haveESC = 0 ;
    int n = 1 ;
-   for (size_t i = 0; i < outputSize-1; i++) {
+   for (size_t i = 0; i < charCount; i++) {
 
       unsigned char valOut = 0 ;
       int x = i % 8 ;
@@ -116,10 +131,73 @@ int PDUDecodeData(char inputData[], char outputData[], size_t outputSize) {
       valOut = valOut & 0x7f ;
 
       n++ ;
-      outputData[i] = valOut ;
+
+      if (haveESC) {
+         strcat(outputData, GSMCharSetBasicExt[valOut]) ;
+         haveESC = 0 ;
+      }
+      else {
+         strcat(outputData, GSMCharSetBasic[valOut]) ;
+      }
+
+      if (valOut == 0x1B) {
+         haveESC = 1 ;
+      }
 
    }
 
    return 0 ;
+
+}
+
+int PDUDecodeDataUnicode(char inputData[], char outputData[]) {
+
+   outputData[0] = 0 ;
+
+   for (size_t i = 0; i < strlen(inputData); i+=4) {
+
+      unsigned int unicodeChar = 0 ;
+      sscanf(&inputData[i], "%04X", &unicodeChar) ;
+
+      char utf8char[5] ;
+      unicodeToUTF8(unicodeChar, utf8char);
+      strcat(outputData, utf8char);
+
+   }
+   return 0 ;
+}
+
+// ** Private functions ***
+
+int unicodeToUTF8(unsigned int unicodeChar, char outUTF8[] ) {
+
+	if (unicodeChar < 0x80) {
+		outUTF8[0] = 0x00 | ( ( unicodeChar >> 0x00 ) & 0x7F ) ;
+		outUTF8[1] = 0x00 ;
+		return 0 ;
+	}
+	else if (unicodeChar < 0x800) {
+		outUTF8[0] = 0xC0 | ( ( unicodeChar >> 0x06 ) & 0x1F ) ;
+		outUTF8[1] = 0x80 | ( ( unicodeChar >> 0x00 ) & 0x3F ) ;
+		outUTF8[2] = 0x00 ;
+		return 0 ;
+	}
+	else if (unicodeChar < 0x10000) {
+		outUTF8[0] = 0xE0 | ( ( unicodeChar >> 0x0C ) & 0x0F ) ;
+		outUTF8[1] = 0x80 | ( ( unicodeChar >> 0x06 ) & 0x3F ) ;
+		outUTF8[2] = 0x80 | ( ( unicodeChar >> 0x00 ) & 0x3F ) ;
+		outUTF8[3] = 0x00 ;
+		return 0 ;
+	}
+	else if (unicodeChar < 0x110000) {
+		outUTF8[0] = 0xF0 | ( ( unicodeChar >> 0x12 ) & 0x07 ) ;
+		outUTF8[1] = 0x80 | ( ( unicodeChar >> 0x0C ) & 0x3F ) ;
+		outUTF8[2] = 0x80 | ( ( unicodeChar >> 0x06 ) & 0x3F ) ;
+		outUTF8[3] = 0x80 | ( ( unicodeChar >> 0x00 ) & 0x3F ) ;
+		outUTF8[4] = 0x00 ;
+		return 0 ;
+	}
+
+   return -1 ;
 
 }
