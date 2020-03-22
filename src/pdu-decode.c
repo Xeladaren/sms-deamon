@@ -93,11 +93,17 @@ int PDUDecodeTime(char inputData[], time_t * date) {
    return 0 ;
 }
 
-int PDUDecodeData7b(char inputData[], char outputData[], size_t charCount) {
+int PDUDecodeData7b(char inputData[], char outputData[], size_t charCount, int headerSize) {
 
    size_t dataInSize = strlen(inputData) / 2 ;
    unsigned char dataIN[dataInSize] ;
    memset(dataIN, 0, dataInSize) ;
+
+   int offsetSize = ( headerSize  * 8 ) / 7 ;
+
+   if ( ( headerSize * 8) % 7 ) {
+      offsetSize++;
+   }
 
    for (size_t i = 0; i < strlen(inputData); i += 2) {
 
@@ -131,17 +137,21 @@ int PDUDecodeData7b(char inputData[], char outputData[], size_t charCount) {
       valOut = valOut & 0x7f ;
 
       n++ ;
-
-      if (haveESC) {
-         strcat(outputData, GSMCharSetBasicExt[valOut]) ;
-         haveESC = 0 ;
+      if (offsetSize > 0) {
+         offsetSize-- ;
       }
-      else {
-         strcat(outputData, GSMCharSetBasic[valOut]) ;
-      }
+      else{
+         if (haveESC) {
+            strcat(outputData, GSMCharSetBasicExt[valOut]) ;
+            haveESC = 0 ;
+         }
+         else {
+            strcat(outputData, GSMCharSetBasic[valOut]) ;
+         }
 
-      if (valOut == 0x1B) {
-         haveESC = 1 ;
+         if (valOut == 0x1B) {
+            haveESC = 1 ;
+         }
       }
 
    }
@@ -150,11 +160,11 @@ int PDUDecodeData7b(char inputData[], char outputData[], size_t charCount) {
 
 }
 
-int PDUDecodeDataUnicode(char inputData[], char outputData[]) {
+int PDUDecodeDataUnicode(char inputData[], char outputData[], int headerSize) {
 
    outputData[0] = 0 ;
 
-   for (size_t i = 0; i < strlen(inputData); i+=4) {
+   for (size_t i = headerSize*2; i < strlen(inputData); i+=4) {
 
       unsigned int unicodeChar = 0 ;
       sscanf(&inputData[i], "%04X", &unicodeChar) ;

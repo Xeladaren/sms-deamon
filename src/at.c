@@ -17,7 +17,6 @@
 #define SUB 0x1a
 
 #define BUFF_SIZE 200
-#define STRING_SIZE 300
 
 #define RAW_BUFFER_SIZE 1000
 
@@ -48,10 +47,11 @@ void * newSMSThreadFunc(void * param) ;
 int setPreferredMessageStorage() ;
 int setShowTextModeParameters() ;
 int setMessageFormat() ;
+int catLongSMS(SMS * sms, int longSMSId, int longSMSPos, int longSMSLen) ;
 int readSMSinMemory(int addr) ;
 int delSMSinMemory(int addr) ;
 time_t parseDate(char * date) ;
-int findChemAfterIndex(char * chem, char * chemError, int index, int timeout, char * cmdReturn) ;
+int findChemAfterIndex(char * chem, char * chemError, int index, int timeout, char ** cmdReturn) ;
 int usleep(int usec);
 
 // *** public functions ***
@@ -160,107 +160,26 @@ int waitSMSReady(int timeout) {
 
 PinStatus getPinStatusAT() {
 
+	pthread_mutex_lock(&bufferMutex) ;
 	int lastBufferIndex = bufferIndex ;
+	pthread_mutex_unlock(&bufferMutex) ;
 
 	sendCmd("AT+CPIN?\n\r") ;
 
 	PinStatus returnStat = SIN_ERROR ;
 
-	if(findChemAfterIndex("OK", "ERROR", lastBufferIndex, 1000, NULL) == -1)
+	if(findChemAfterIndex("OK", "ERROR", lastBufferIndex, 1000, NULL) == -1){
 		return SIN_ERROR ;
+	}
 
-	char cmd[STRING_SIZE] ;
+	char * cmd = NULL ;
 
-	if(findChemAfterIndex("+CPIN:", NULL, lastBufferIndex, 1000, cmd) == -1)
+	if(findChemAfterIndex("+CPIN:", NULL, lastBufferIndex, 1000, &cmd) == -1){
+		free(cmd) ;
 		return SIN_ERROR ;
+	}
 
-	if (strstr(cmd, "READY"))
-		returnStat = SIN_READY ;
-
-	else if (strstr(cmd, "SIM PIN"))
-		returnStat = SIM_PIN ;
-
-	else if (strstr(cmd, "SIM PIN2"))
-		returnStat = SIM_PIN2 ;
-
-	else if (strstr(cmd, "SIM PUK"))
-		returnStat = SIM_PUK ;
-
-	else if (strstr(cmd, "SIM PUK2"))
-		returnStat = SIM_PUK2 ;
-
-	else
-		returnStat = SIM_UNKNOWN ;
-
-
-	return returnStat ;
-}
-
-PhoneStatus getPhoneStatusAT() {
-	int lastBufferIndex = bufferIndex ;
-
-	sendCmd("AT+CPAS\n\r") ;
-
-	PhoneStatus returnStat = PHONE_UNKNOWN ;
-
-	if(findChemAfterIndex("OK", "ERROR", lastBufferIndex, 1000, NULL) == -1)
-		return PHONE_UNKNOWN ;
-
-	/*
-
-	char cmd[STRING_SIZE] ;
-
-	if(findChemAfterIndex("+CPIN:", NULL, lastBufferIndex, 1000, cmd) == -1)
-		return ERROR ;
-
-	if (strstr(cmd, "READY"))
-		returnStat = READY ;
-
-	else if (strstr(cmd, "SIM PIN"))
-		returnStat = SIM_PIN ;
-
-	else if (strstr(cmd, "SIM PIN2"))
-		returnStat = SIM_PIN2 ;
-
-	else if (strstr(cmd, "SIM PUK"))
-		returnStat = SIM_PUK ;
-
-	else if (strstr(cmd, "SIM PUK2"))
-		returnStat = SIM_PUK2 ;
-
-	else
-		returnStat = UNKNOWN ;
-
-	*/
-
-	return returnStat ;
-}
-
-PinStatus setPinAT(char pin[], int timeout) {
-
-	PinStatus returnStat = getPinStatusAT() ;
-
-	if (returnStat == SIM_PIN || returnStat == SIM_PIN2) {
-
-		// make write cmd
-
-		int lastBufferIndex = bufferIndex ;
-
-		char writeMSG[11+strlen(pin)] ;
-
-		sprintf(writeMSG, "AT+CPIN=%s\n\r", pin);
-
-		sendCmd(writeMSG);
-
-		// wait return
-
-		if(findChemAfterIndex("OK", "ERROR", lastBufferIndex, 1000, NULL) == -1)
-			return SIN_ERROR ;
-
-		char cmd[STRING_SIZE] ;
-
-		if(findChemAfterIndex("+CPIN:", NULL, lastBufferIndex, 1000, cmd) == -1)
-			return SIN_ERROR ;
+	if (cmd) {
 
 		if (strstr(cmd, "READY"))
 			returnStat = SIN_READY ;
@@ -279,6 +198,70 @@ PinStatus setPinAT(char pin[], int timeout) {
 
 		else
 			returnStat = SIM_UNKNOWN ;
+
+		free(cmd) ;
+
+	}
+
+	return returnStat ;
+}
+
+PinStatus setPinAT(char pin[], int timeout) {
+
+	PinStatus returnStat = getPinStatusAT() ;
+
+	if (returnStat == SIM_PIN || returnStat == SIM_PIN2) {
+
+		// make write cmd
+
+		pthread_mutex_lock(&bufferMutex) ;
+		int lastBufferIndex = bufferIndex ;
+		pthread_mutex_unlock(&bufferMutex) ;
+
+		char writeMSG[11+strlen(pin)] ;
+
+		sprintf(writeMSG, "AT+CPIN=%s\n\r", pin);
+
+		sendCmd(writeMSG);
+
+		// wait return
+
+
+		if(findChemAfterIndex("OK", "ERROR", lastBufferIndex, 1000, NULL) == -1){
+			return SIN_ERROR ;
+		}
+
+		char * cmd = NULL ;
+
+		if(findChemAfterIndex("+CPIN:", NULL, lastBufferIndex, 1000, &cmd) == -1){
+			free(cmd);
+			return SIN_ERROR ;
+		}
+
+
+		if (cmd) {
+
+			if (strstr(cmd, "READY"))
+				returnStat = SIN_READY ;
+
+			else if (strstr(cmd, "SIM PIN"))
+				returnStat = SIM_PIN ;
+
+			else if (strstr(cmd, "SIM PIN2"))
+				returnStat = SIM_PIN2 ;
+
+			else if (strstr(cmd, "SIM PUK"))
+				returnStat = SIM_PUK ;
+
+			else if (strstr(cmd, "SIM PUK2"))
+				returnStat = SIM_PUK2 ;
+
+			else
+				returnStat = SIM_UNKNOWN ;
+
+			free(cmd) ;
+
+		}
 
 	}
 
@@ -369,23 +352,22 @@ void * readThreadFunc(void * param) {
 	printf("Thread START\n");
 
 	pthread_mutex_lock(&threadRunMutex) ;
-
 	threadRun = 1 ;
-
 	pthread_mutex_unlock(&threadRunMutex) ;
 
 	while(threadRun) {
 
+		pthread_mutex_lock(&bufferMutex) ;
+
 		if (buffer[bufferIndex] == NULL){
 
-			pthread_mutex_lock(&bufferMutex) ;
-
-			buffer[bufferIndex] = malloc(STRING_SIZE) ;
-			memset(buffer[bufferIndex], 0, STRING_SIZE) ;
-
-			pthread_mutex_unlock(&bufferMutex) ;
+			buffer[bufferIndex] = malloc(1) ;
+			buffer[0] = 0 ;
 
 		}
+
+		pthread_mutex_unlock(&bufferMutex) ;
+
 
 		pthread_mutex_unlock(&ttyMutex) ;
 
@@ -398,87 +380,81 @@ void * readThreadFunc(void * param) {
 
 		if (out == '\n' && outOld != '\n') {
 
-			if(buffer[bufferIndex] != NULL) {
-
-				FILE * logFile = fopen("./log.txt", "a") ;
-
-				if (logFile != NULL) {
-
-					pthread_mutex_lock(&bufferMutex) ;
-
-					fprintf(logFile, "%s\n", buffer[bufferIndex]) ;
-
-					printf("%d> %s\n", bufferIndex, buffer[bufferIndex]);
-
-					pthread_mutex_unlock(&bufferMutex) ;
-
-					fclose(logFile) ;
-				}
-
-				pthread_mutex_lock(&bufferMutex) ;
-
-				if (strstr(buffer[bufferIndex], "Call Ready")) {
-
-					printf("Call Ready !!\n");
-					CallReady = 1 ;
-
-				}
-				else if (strstr(buffer[bufferIndex], "SMS Ready")) {
-
-					printf("SMS Ready !!\n");
-					SMSReady = 1 ;
-
-				}
-				else if (strstr(buffer[bufferIndex], "+CMTI:")) {
-
-					printf("New SMS !!\n");
-
-					char * cmd = malloc(STRING_SIZE) ;
-					strncpy(cmd, buffer[bufferIndex], STRING_SIZE) ;
-
-					pthread_create(&newSMSThread, NULL, &newSMSThreadFunc, (void *) cmd);
-
-				}
-				else if (strstr(buffer[bufferIndex], "+CMTI:")) {
-
-					printf("New SMS !!\n");
-
-					char * cmd = malloc(STRING_SIZE) ;
-					strncpy(cmd, buffer[bufferIndex], STRING_SIZE) ;
-
-					pthread_create(&newSMSThread, NULL, &newSMSThreadFunc, (void *) cmd);
-
-				}
-				else if (strstr(buffer[bufferIndex], "RING")) {
-
-				}
-
-				pthread_mutex_unlock(&bufferMutex) ;
-
-			}
+			char * cmd = NULL ;
 
 			pthread_mutex_lock(&bufferMutex) ;
+
+			int cmdIndex = bufferIndex ;
+
+			cmd = malloc(strlen(buffer[bufferIndex])+1) ;
+			strcpy(cmd, buffer[bufferIndex]) ;
 
 			bufferIndex = ( bufferIndex + 1 ) % BUFF_SIZE ;
 
 			free(buffer[bufferIndex]) ;
 			buffer[bufferIndex] = NULL ;
 
+
 			pthread_mutex_unlock(&bufferMutex) ;
 
-			index2 = 0 ;
 
+			if(cmd != NULL) {
+
+				FILE * logFile = fopen("./log.txt", "a") ;
+
+				if (logFile != NULL) {
+
+					fprintf(logFile, "%s\n", cmd) ;
+					printf("%d> %s\n", cmdIndex, cmd);
+					fclose(logFile) ;
+
+				}
+
+				if (strstr(cmd, "Call Ready")) {
+
+					printf("Call Ready !!\n");
+					CallReady = 1 ;
+
+				}
+				else if (strstr(cmd, "SMS Ready")) {
+
+					printf("SMS Ready !!\n");
+					SMSReady = 1 ;
+
+				}
+				else if (strstr(cmd, "+CMTI:")) {
+
+					printf("New SMS !!\n");
+
+					char * cmdSMS = malloc(strlen(cmd)+1) ;
+					strcpy(cmdSMS, cmd) ;
+
+					pthread_create(&newSMSThread, NULL, &newSMSThreadFunc, (void *) cmdSMS);
+
+				}
+				else if (strstr(cmd, "RING")) {
+
+				}
+
+			}
+
+			free(cmd) ;
+
+			index2 = 0 ;
 
 		}
 		else if(out != '\n') {
 
 			pthread_mutex_lock(&bufferMutex) ;
 
+			buffer[bufferIndex] = realloc(buffer[bufferIndex], index2+2) ;
+
+			buffer[bufferIndex][index2+1] = 0 ;
 			buffer[bufferIndex][index2] = out ;
 
 			pthread_mutex_unlock(&bufferMutex) ;
 
-			index2 = ( index2 + 1 ) % (STRING_SIZE - 1) ;
+			index2++ ;
 
 		}
 
@@ -514,12 +490,17 @@ void * newSMSThreadFunc(void * param) {
 
 int setPreferredMessageStorage() {
 
+	pthread_mutex_lock(&bufferMutex) ;
 	int lastBufferIndex = bufferIndex ;
+	pthread_mutex_unlock(&bufferMutex) ;
 
 	sendCmd("AT+CPMS=\"SM\",\"SM\",\"SM\"\n\r") ;
 
-	if(findChemAfterIndex("OK", "ERROR", lastBufferIndex, 1000, NULL) == -1)
+
+	if(findChemAfterIndex("OK", "ERROR", lastBufferIndex, 1000, NULL) == -1){
 		return -1 ;
+	}
+
 
 	return 0 ;
 
@@ -529,12 +510,93 @@ int setMessageFormat() {
 
 	printf("set Message Format !!\n");
 
+	pthread_mutex_lock(&bufferMutex) ;
 	int lastBufferIndex = bufferIndex ;
+	pthread_mutex_unlock(&bufferMutex) ;
 
 	sendCmd("AT+CMGF=0\n\r") ;
 
-	if(findChemAfterIndex("OK", "ERROR", lastBufferIndex, 1000, NULL) == -1)
+	if(findChemAfterIndex("OK", "ERROR", lastBufferIndex, 1000, NULL) == -1){
 		return -1 ;
+	}
+
+	return 0 ;
+
+}
+
+int catLongSMS(SMS * sms, int longSMSId, int longSMSPos, int longSMSLen) {
+
+	static SMS * * smsList = NULL ;
+	static int count = 0 ;
+
+	if (smsList == NULL) {
+
+		smsList = malloc( sizeof(SMS *) * longSMSLen ) ;
+
+	}
+
+	smsList[longSMSPos-1] = sms ;
+	count++ ;
+
+	printf("count = %d - %d\n", count, longSMSLen);
+
+	if (count == longSMSLen) {
+
+		SMS * completSMS = (SMS *) malloc(sizeof(SMS)) ;
+
+		completSMS->sender = malloc(strlen(sms->sender)+1) ;
+		strcpy(completSMS->sender, sms->sender) ;
+
+		time_t date = 0 ;
+
+		int finalSMSSize = 1 ;
+		int finalPDUSize = 1 ;
+
+		for (size_t i = 0; i < count; i++) {
+			finalSMSSize += strlen(smsList[i]->msg) ;
+			finalPDUSize += strlen(smsList[i]->PDU) + 1 ;
+		}
+
+		printf("Final SMS size = %d\n", finalSMSSize);
+		printf("Final PDU size = %d\n", finalPDUSize);
+
+		char * msg = malloc(finalSMSSize);
+		msg[0] = 0 ;
+
+		char * PDU = malloc(finalPDUSize);
+		PDU[0] = 0 ;
+
+		for (size_t i = 0; i < count; i++) {
+
+			if (smsList[i]->date > date) {
+				date = smsList[i]->date ;
+			}
+
+			strcat(msg, smsList[i]->msg) ;
+
+			strcat(PDU, smsList[i]->PDU) ;
+			strcat(PDU, " ");
+
+			freeSMS(smsList[i]);
+			smsList[i] = NULL ;
+
+		}
+
+		completSMS->date = date ;
+		completSMS->msg = msg ;
+		completSMS->PDU = PDU ;
+
+		free(smsList);
+		smsList = NULL ;
+		count = 0 ;
+
+		printf("coucou\n");
+
+		if (newSMSFunction) {
+			(*newSMSFunction)(completSMS);
+		}
+
+	}
 
 	return 0 ;
 
@@ -559,10 +621,10 @@ int readSMSinMemory(int addr) {
 
 		if(indexOK != -1) {
 
-			char cmdReturn[STRING_SIZE] ;
-			int indexCMGR = findChemAfterIndex("+CMGR:", NULL, lastBufferIndex, 1000, cmdReturn) ;
+			char * cmdReturn = NULL ;
+			int indexCMGR = findChemAfterIndex("+CMGR:", NULL, lastBufferIndex, 1000, &cmdReturn) ;
 
-			if (indexCMGR != -1) {
+			if (cmdReturn && indexCMGR != -1) {
 
 				int PDUIndex = ( indexCMGR + 1 ) % BUFF_SIZE ;
 
@@ -579,131 +641,158 @@ int readSMSinMemory(int addr) {
 				int SMSCenterAddrLen = 0 ; // SMS Center Addrese len.
 				int cursor = 0 ;
 
-				sscanf(PDUstr, "%02X", &SMSCenterAddrLen) ;
+				sscanf(&PDUstr[cursor], "%02X", &SMSCenterAddrLen) ;
 
-				cursor += 2 + (SMSCenterAddrLen * 2) + 2 ;
+				cursor += 2 + (SMSCenterAddrLen * 2) ;
 
-				int SMSSenderAddrLen ;
+				int PDUType = 0 ;
+				sscanf(&PDUstr[cursor], "%02X", &PDUType) ;
 
-				sscanf(&PDUstr[cursor], "%02X", &SMSSenderAddrLen) ;
-				cursor += 2 ;
+				int MTI  = ( PDUType >> 0 ) & 0x03 ;
 
-				int PDUSenderLen = 2+SMSSenderAddrLen ;
+				if (MTI == 0x00) {
 
-				if (PDUSenderLen % 2)
-					PDUSenderLen++ ;
+					//int MMS  = ( PDUType >> 2 ) & 0x01 ;
+					//int SRI  = ( PDUType >> 5 ) & 0x01 ;
+					int UDHI = ( PDUType >> 6 ) & 0x01 ;
+					//int RP   = ( PDUType >> 7 ) & 0x01 ;
 
-				char PDUSenderAddr[PDUSenderLen+1] ;
-				PDUSenderAddr[PDUSenderLen] = '\0' ;
-				memcpy(PDUSenderAddr, &PDUstr[cursor], PDUSenderLen) ;
+					cursor += 2 ;
 
-				// '+' + num len + '\0' ending
-				char * senderNum = (char *) malloc(1+SMSSenderAddrLen+1) ;
+					int SMSSenderAddrLen ;
 
-				PDUDecodeNumber(PDUSenderAddr, senderNum) ;
+					sscanf(&PDUstr[cursor], "%02X", &SMSSenderAddrLen) ;
+					cursor += 2 ;
 
-				// PDUSenderLen + '\0' ending
-				cursor += PDUSenderLen ;
+					int PDUSenderLen = 2+SMSSenderAddrLen ;
 
-				unsigned char ProtocolID = 0 ;
-				sscanf(&PDUstr[cursor], "%02hhX", &ProtocolID) ;
-				cursor += 2 ;
+					if (PDUSenderLen % 2)
+						PDUSenderLen++ ;
 
-				unsigned char dataCodingID = 0 ;
-				sscanf(&PDUstr[cursor], "%02hhX", &dataCodingID) ;
-				cursor += 2 ;
+					char PDUSenderAddr[PDUSenderLen+1] ;
+					PDUSenderAddr[PDUSenderLen] = '\0' ;
+					memcpy(PDUSenderAddr, &PDUstr[cursor], PDUSenderLen) ;
 
-				char PDUdate[15] ;
-				time_t date = 0 ;
-				memcpy(PDUdate, &PDUstr[cursor], 14);
-				PDUdate[14] = 0 ;
-				PDUDecodeTime(PDUdate, &date);
-				cursor += 14 ;
+					// '+' + num len + '\0' ending
+					char * senderNum = (char *) malloc(1+SMSSenderAddrLen+1) ;
 
-				int dataLen = 0 ;
-				sscanf(&PDUstr[cursor], "%02X", &dataLen) ;
-				cursor += 2 ;
+					PDUDecodeNumber(PDUSenderAddr, senderNum) ;
 
-				char * smsText ;
+					// PDUSenderLen + '\0' ending
+					cursor += PDUSenderLen ;
 
-				if (dataCodingID == 0x00) {
-					smsText = (char *) malloc(dataLen*2) ; // allocate more for potential special character.
-					memset(smsText, 0, dataLen*2);
-					PDUDecodeData7b(&PDUstr[cursor], smsText, dataLen) ;
-				}
-				else if (dataCodingID == 0x04) {
-					smsText = (char *) malloc(19);
-					strcpy(smsText, "MMS unsuported now") ;
-				}
-				else if (dataCodingID == 0x08) {
-					smsText = (char *) malloc((dataLen*2)+1) ;
-					PDUDecodeDataUnicode(&PDUstr[cursor], smsText);
-				}
-				else {
-					smsText = (char *) malloc(20);
-					strcpy(smsText, "unsuported msg type") ;
-				}
+					unsigned char ProtocolID = 0 ;
+					sscanf(&PDUstr[cursor], "%02hhX", &ProtocolID) ;
+					cursor += 2 ;
 
+					unsigned char dataCodingID = 0 ;
+					sscanf(&PDUstr[cursor], "%02hhX", &dataCodingID) ;
+					cursor += 2 ;
 
-				SMS * sms = (SMS *) malloc(sizeof(SMS)) ;
+					char PDUdate[15] ;
+					time_t date = 0 ;
+					memcpy(PDUdate, &PDUstr[cursor], 14);
+					PDUdate[14] = 0 ;
+					PDUDecodeTime(PDUdate, &date);
+					cursor += 14 ;
 
-				sms->date = date ;
-				sms->senderSize = 1+SMSSenderAddrLen+1 ;
-				sms->msgSize = dataLen+1 ;
-				sms->sender = senderNum ;
-				sms->msg = smsText ;
-				sms->PDU = PDUstr ;
+					int dataLen = 0 ;
+					sscanf(&PDUstr[cursor], "%02X", &dataLen) ;
+					cursor += 2 ;
 
-				if (newSMSFunction) {
-					(*newSMSFunction)(sms);
-				}
+					int isLongSMS  = 0 ;
+					int headerSize = 0 ;
+					int headerType = -1 ;
 
-				/*
+					int longSMSLen = 0 ; // total SMS count
+					int longSMSPos = 0 ; // pos of the actual sms
 
-				if(protocol == 0){
+					int longSMSId  = 0 ;
 
-					// TODO : use string data
+					if (UDHI) {
+						int cursor2 = cursor ;
 
-					SMS newSMS ;
+						sscanf(&PDUstr[cursor2], "%02X", &headerSize) ;
+						headerSize++;
+						cursor2 += 2 ;
 
-					newSMS.date = timeEpoch ;
-					strncpy(newSMS.sender, senderNum, 15);
-					strncpy(newSMS.msg, data, 160);
+						sscanf(&PDUstr[cursor2], "%02X", &headerType) ;
+						cursor2 += 2 + 2 ;
 
-					printf("SENDER : %s\n", newSMS.sender);
-					printf("TIME : %ld\n", newSMS.date);
-					printf("MSG : \n%s\n---\n", newSMS.msg);
+						if (headerType == 0x00 || headerType == 0x08) {
+							isLongSMS = 1 ;
 
+							if (headerType == 0x00) {
+								sscanf(&PDUstr[cursor2], "%02X", &longSMSId) ;
+								cursor2 += 2 ;
+							}
+							else {
+								sscanf(&PDUstr[cursor2], "%04X", &longSMSId) ;
+								cursor2 += 4 ;
+							}
 
-				}
-				else if (protocol == 4) {
-					// TODO : MMS
-				}
-				else if (protocol == 8) {
+							sscanf(&PDUstr[cursor2], "%02X", &longSMSLen) ;
+							cursor2 += 2 ;
 
-					size_t uniSMSlen = (dataSize/4)+1 ;
-					wchar_t unicodeSMS[uniSMSlen];
-					memset(unicodeSMS, 0, uniSMSlen * sizeof(wchar_t));
+							sscanf(&PDUstr[cursor2], "%02X", &longSMSPos) ;
 
-					for (size_t i = 0; i < dataSize; i += 4) {
+							printf("IS LONG SMS (%X) : %d/%d\n", longSMSId, longSMSPos, longSMSLen);
 
-						char uniChar[5];
-						memset(uniChar, 0, 5);
-						memcpy(uniChar, &data[i], 4);
-
-						sscanf(uniChar, "%X", &unicodeSMS[i/4]) ;
+						}
 
 					}
 
-					// TODO : use unicode data.
+					char * smsText ;
+
+					if (dataCodingID == 0x00) {
+
+						smsText = (char *) malloc(dataLen*2) ; // allocate more for potential special character.
+						memset(smsText, 0, dataLen*2);
+						PDUDecodeData7b(&PDUstr[cursor], smsText, dataLen, headerSize) ;
+
+					}
+					else if (dataCodingID == 0x04) {
+						smsText = (char *) malloc(19);
+						strcpy(smsText, "MMS unsuported now") ;
+					}
+					else if (dataCodingID == 0x08) {
+
+						smsText = (char *) malloc((dataLen*2)+1) ;
+						PDUDecodeDataUnicode(&PDUstr[cursor], smsText, headerSize);
+
+					}
+					else {
+						smsText = (char *) malloc(20);
+						strcpy(smsText, "unsuported msg type") ;
+					}
+
+					SMS * sms = (SMS *) malloc(sizeof(SMS)) ;
+
+					sms->date = date ;
+					sms->sender = senderNum ;
+					sms->msg = smsText ;
+					sms->PDU = PDUstr ;
+
+					//printSMS(sms) ;
+
+					if (isLongSMS) {
+						catLongSMS(sms, longSMSId, longSMSPos, longSMSLen) ;
+					}
+					else {
+						if (newSMSFunction) {
+							(*newSMSFunction)(sms);
+						}
+					}
 
 				}
 
-				*/
+				free(cmdReturn) ;
 
 				return 0 ;
 
 			}
+
+			free(cmdReturn) ;
 
 		}
 		else return -1 ;
@@ -725,12 +814,15 @@ int delSMSinMemory(int addr) {
 		sprintf(writeMSG, "AT+CMGD=%d\n\r", addr) ;
 		printf("del msg in %d\n", addr);
 
+		pthread_mutex_lock(&bufferMutex) ;
 		int lastBufferIndex = bufferIndex ;
+		pthread_mutex_unlock(&bufferMutex) ;
 
 		sendCmd(writeMSG) ;
 
-		if(findChemAfterIndex("OK", "ERROR", lastBufferIndex, 1000, NULL) == -1)
+		if(findChemAfterIndex("OK", "ERROR", lastBufferIndex, 1000, NULL) == -1) {
 			return -1 ;
+		}
 
 	}
 	else {
@@ -770,13 +862,17 @@ time_t parseDate(char * date) {
 
 }
 
-int findChemAfterIndex(char * chem, char * chemError, int index, int timeout, char * cmdReturn) {
+int findChemAfterIndex(char * chem, char * chemError, int index, int timeout, char ** cmdReturn) {
 
 	while(timeout) {
 
-		if(index != bufferIndex) {
+		pthread_mutex_lock(&bufferMutex);
+		int buffIndex = bufferIndex ;
+		pthread_mutex_unlock(&bufferMutex) ;
 
-			int searchIndex = bufferIndex - 1 ;
+		if(index != buffIndex) {
+
+			int searchIndex = buffIndex - 1 ;
 
 			if(searchIndex < 0) {
 				searchIndex = BUFF_SIZE + (searchIndex % BUFF_SIZE) ;
@@ -785,30 +881,41 @@ int findChemAfterIndex(char * chem, char * chemError, int index, int timeout, ch
 			while(searchIndex != index)
 			{
 
+				char * cmd ;
+
 				pthread_mutex_lock(&bufferMutex);
 
-				if(strstr(buffer[searchIndex], chem))
-				{
-					if(cmdReturn != NULL) {
-						strncpy(cmdReturn, buffer[searchIndex], STRING_SIZE) ;
-					}
+				cmd = malloc(strlen(buffer[searchIndex])+1);
+				strcpy(cmd, buffer[searchIndex]) ;
 
-					pthread_mutex_unlock(&bufferMutex) ;
+				pthread_mutex_unlock(&bufferMutex) ;
+
+
+
+				if(strstr(cmd, chem))
+				{
+
+					if (cmdReturn) {
+						*cmdReturn = cmd ;
+					}
+					else {
+						free(cmd) ;
+					}
 
 					return searchIndex ;
 				}
-				else if (chemError != NULL && strstr(buffer[searchIndex], chemError))
+				else if (chemError != NULL && strstr(cmd, chemError))
 				{
-					if(cmdReturn != NULL){
-						strncpy(cmdReturn, buffer[searchIndex], STRING_SIZE) ;
-					}
 
-					pthread_mutex_unlock(&bufferMutex) ;
+					if (cmdReturn) {
+						*cmdReturn = cmd ;
+					}
+					else {
+						free(cmd);
+					}
 
 					return -1 ;
 				}
-
-				pthread_mutex_unlock(&bufferMutex) ;
 
 				searchIndex = searchIndex - 1 ;
 

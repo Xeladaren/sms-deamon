@@ -30,7 +30,7 @@ void newSMS(SMS * sms){
 	if (ret == 0 || errno == EEXIST) {
 
 		char fileName[100] ;
-		sprintf(fileName, "sms/%ld%s.txt", sms->date, sms->sender) ;
+		sprintf(fileName, "sms/%ld_%s.txt", sms->date, sms->sender) ;
 
 		FILE * file = fopen(fileName, "w") ;
 

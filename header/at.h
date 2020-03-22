@@ -7,12 +7,10 @@ typedef enum phoneStatus {PHONE_READY, PHONE_UNAVAILABLE, PHONE_UNKNOWN, PHONE_R
 typedef struct
 {
 
-   time_t date ;
-   size_t senderSize ;
-   size_t msgSize ;
-   char * sender ;
-   char * msg ;
-   char * PDU ;
+   time_t date ;     // The timestamp of the SMS
+   char * sender ;   // The phone number of the sender
+   char * msg ;      // The SMS msg
+   char * PDU ;      // the PDU string of the SMS
 
 } SMS;
 
@@ -30,8 +28,6 @@ int waitCallReady(int timeout) ;
 int waitSMSReady(int timeout) ;
 
 PinStatus getPinStatusAT() ;
-
-PhoneStatus getPhoneStatusAT() ;
 
 PinStatus setPinAT(char pin[], int timeout) ;
 
