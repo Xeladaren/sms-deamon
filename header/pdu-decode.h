@@ -1,7 +1,7 @@
 #ifndef PDU_DECODE
 #define PDU_DECODE
 
-int PDUDecodeNumber(char inputData[], char outputData[]) ;
+int PDUDecodeNumber(char inputData[], char outputData[], int numberLen) ;
 
 int PDUDecodeTime(char inputData[], time_t * date) ;
 

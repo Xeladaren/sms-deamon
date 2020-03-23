@@ -40,3 +40,5 @@ int setNewSMSFunction(void (*function)(SMS *)) ;
 void printSMS(SMS * sms) ;
 
 void freeSMS(SMS * sms) ;
+
+int loadSMSList() ;

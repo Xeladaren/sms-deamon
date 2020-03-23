@@ -48,11 +48,14 @@ int setPreferredMessageStorage() ;
 int setShowTextModeParameters() ;
 int setMessageFormat() ;
 int catLongSMS(SMS * sms, int longSMSId, int longSMSPos, int longSMSLen) ;
+int decodeNewSMSPDU(char PDUstr[]) ;
 int readSMSinMemory(int addr) ;
 int delSMSinMemory(int addr) ;
-time_t parseDate(char * date) ;
 int findChemAfterIndex(char * chem, char * chemError, int index, int timeout, char ** cmdReturn) ;
-int usleep(int usec);
+
+// fix impicite declaration
+
+int usleep(int usec); // obsolete function
 
 // *** public functions ***
 
@@ -176,6 +179,7 @@ PinStatus getPinStatusAT() {
 
 	if(findChemAfterIndex("+CPIN:", NULL, lastBufferIndex, 1000, &cmd) == -1){
 		free(cmd) ;
+		cmd = NULL ;
 		return SIN_ERROR ;
 	}
 
@@ -200,6 +204,7 @@ PinStatus getPinStatusAT() {
 			returnStat = SIM_UNKNOWN ;
 
 		free(cmd) ;
+		cmd = NULL ;
 
 	}
 
@@ -235,6 +240,7 @@ PinStatus setPinAT(char pin[], int timeout) {
 
 		if(findChemAfterIndex("+CPIN:", NULL, lastBufferIndex, 1000, &cmd) == -1){
 			free(cmd);
+			cmd = NULL ;
 			return SIN_ERROR ;
 		}
 
@@ -260,6 +266,7 @@ PinStatus setPinAT(char pin[], int timeout) {
 				returnStat = SIM_UNKNOWN ;
 
 			free(cmd) ;
+			cmd = NULL ;
 
 		}
 
@@ -323,9 +330,80 @@ void printSMS(SMS * sms) {
 
 void freeSMS(SMS * sms) {
 	free(sms->sender);
+	sms->sender = NULL ;
 	free(sms->msg);
+	sms->msg = NULL ;
 	free(sms->PDU);
+	sms->PDU = NULL ;
 	free(sms);
+	sms = NULL ;
+}
+
+int loadSMSList() {
+
+	printf("Load SMS list\n");
+
+	pthread_mutex_lock(&bufferMutex);
+	int lastBufferIndex = bufferIndex ;
+	pthread_mutex_unlock(&bufferMutex);
+
+	sendCmd("AT+CMGL=4\n\r") ;
+
+	int indexOK = findChemAfterIndex("OK", "ERROR", lastBufferIndex, 1000, NULL) ;
+
+	printf("index OK %d %d\n", lastBufferIndex, indexOK);
+
+	if (indexOK != -1) {
+
+		int searchIndex = lastBufferIndex ;
+		int nextIsNewPDU = 0 ;
+
+		while (searchIndex != indexOK) {
+
+			char * cmd = NULL ;
+
+			pthread_mutex_lock(&bufferMutex);
+
+			cmd = (char*) malloc(strlen(buffer[searchIndex])+1) ;
+			strcpy(cmd, buffer[searchIndex]) ;
+
+			pthread_mutex_unlock(&bufferMutex);
+
+			if (nextIsNewPDU) {
+
+				decodeNewSMSPDU(cmd);
+
+				nextIsNewPDU = 0 ;
+			}
+
+			if (strstr(cmd, "+CMGL:")) {
+
+				int memAddr, status ;
+
+				sscanf(cmd, "+CMGL: %d,%d", &memAddr, &status) ;
+
+				if(status == 0) {
+					nextIsNewPDU = 1 ;
+				}
+
+				delSMSinMemory(memAddr) ;
+
+			}
+
+			free(cmd);
+			cmd = NULL ;
+
+		searchIndex = ( searchIndex + 1 ) % BUFF_SIZE ;
+
+		}
+
+	}
+	else {
+		return -1 ;
+	}
+
+	return 0 ;
+
 }
 
 // *** private function ***
@@ -439,6 +517,7 @@ void * readThreadFunc(void * param) {
 			}
 
 			free(cmd) ;
+			cmd = NULL ;
 
 			index2 = 0 ;
 
@@ -484,6 +563,7 @@ void * newSMSThreadFunc(void * param) {
 	}
 
 	free(cmd) ;
+	cmd = NULL ;
 
 	return NULL ;
 }
@@ -602,6 +682,165 @@ int catLongSMS(SMS * sms, int longSMSId, int longSMSPos, int longSMSLen) {
 
 }
 
+int decodeNewSMSPDU(char PDUstr[]) {
+
+
+	int SMSCenterAddrLen = 0 ; // SMS Center Addrese len.
+	int cursor = 0 ;
+
+	sscanf(&PDUstr[cursor], "%02X", &SMSCenterAddrLen) ;
+
+	cursor += 2 + (SMSCenterAddrLen * 2) ;
+
+	int PDUType = 0 ;
+	sscanf(&PDUstr[cursor], "%02X", &PDUType) ;
+
+	int MTI  = ( PDUType >> 0 ) & 0x03 ;
+
+	if (MTI == 0x00) {
+
+		//int MMS  = ( PDUType >> 2 ) & 0x01 ;
+		//int SRI  = ( PDUType >> 5 ) & 0x01 ;
+		int UDHI = ( PDUType >> 6 ) & 0x01 ;
+		//int RP   = ( PDUType >> 7 ) & 0x01 ;
+
+		cursor += 2 ;
+
+		int SMSSenderAddrLen ;
+
+		sscanf(&PDUstr[cursor], "%02X", &SMSSenderAddrLen) ;
+		cursor += 2 ;
+
+		int PDUSenderLen = 2+SMSSenderAddrLen ;
+
+		if (PDUSenderLen % 2)
+			PDUSenderLen++ ;
+
+		char PDUSenderAddr[PDUSenderLen+1] ;
+		PDUSenderAddr[PDUSenderLen] = '\0' ;
+		memcpy(PDUSenderAddr, &PDUstr[cursor], PDUSenderLen) ;
+
+		// '+' + num len + '\0' ending
+		char * senderNum = (char *) malloc(1+SMSSenderAddrLen+1) ;
+
+		PDUDecodeNumber(PDUSenderAddr, senderNum, SMSSenderAddrLen) ;
+
+		// PDUSenderLen + '\0' ending
+		cursor += PDUSenderLen ;
+
+		unsigned char ProtocolID = 0 ;
+		sscanf(&PDUstr[cursor], "%02hhX", &ProtocolID) ;
+		cursor += 2 ;
+
+		unsigned char dataCodingID = 0 ;
+		sscanf(&PDUstr[cursor], "%02hhX", &dataCodingID) ;
+		cursor += 2 ;
+
+		char PDUdate[15] ;
+		time_t date = 0 ;
+		memcpy(PDUdate, &PDUstr[cursor], 14);
+		PDUdate[14] = 0 ;
+		PDUDecodeTime(PDUdate, &date);
+		cursor += 14 ;
+
+		int dataLen = 0 ;
+		sscanf(&PDUstr[cursor], "%02X", &dataLen) ;
+		cursor += 2 ;
+
+		int isLongSMS  = 0 ;
+		int headerSize = 0 ;
+		int headerType = -1 ;
+
+		int longSMSLen = 0 ; // total SMS count
+		int longSMSPos = 0 ; // pos of the actual sms
+
+		int longSMSId  = 0 ;
+
+		if (UDHI) {
+			int cursor2 = cursor ;
+
+			sscanf(&PDUstr[cursor2], "%02X", &headerSize) ;
+			headerSize++;
+			cursor2 += 2 ;
+
+			sscanf(&PDUstr[cursor2], "%02X", &headerType) ;
+			cursor2 += 2 + 2 ;
+
+			if (headerType == 0x00 || headerType == 0x08) {
+				isLongSMS = 1 ;
+
+				if (headerType == 0x00) {
+					sscanf(&PDUstr[cursor2], "%02X", &longSMSId) ;
+					cursor2 += 2 ;
+				}
+				else {
+					sscanf(&PDUstr[cursor2], "%04X", &longSMSId) ;
+					cursor2 += 4 ;
+				}
+
+				sscanf(&PDUstr[cursor2], "%02X", &longSMSLen) ;
+				cursor2 += 2 ;
+
+				sscanf(&PDUstr[cursor2], "%02X", &longSMSPos) ;
+
+				printf("IS LONG SMS (%X) : %d/%d\n", longSMSId, longSMSPos, longSMSLen);
+
+			}
+
+		}
+
+		char * smsText ;
+
+		if (dataCodingID == 0x00) {
+
+			smsText = (char *) malloc(dataLen*2) ; // allocate more for potential special character.
+			memset(smsText, 0, dataLen*2);
+			PDUDecodeData7b(&PDUstr[cursor], smsText, dataLen, headerSize) ;
+
+		}
+		else if (dataCodingID == 0x04) {
+			smsText = (char *) malloc(19);
+			strcpy(smsText, "MMS unsuported now") ;
+		}
+		else if (dataCodingID == 0x08) {
+
+			smsText = (char *) malloc((dataLen*2)+1) ;
+			PDUDecodeDataUnicode(&PDUstr[cursor], smsText, headerSize);
+
+		}
+		else {
+			smsText = (char *) malloc(20);
+			strcpy(smsText, "unsuported msg type") ;
+		}
+
+		SMS * sms = (SMS *) malloc(sizeof(SMS)) ;
+		char * smsPDU = malloc(strlen(PDUstr)+1);
+		strcpy(smsPDU, PDUstr);
+
+		sms->date = date ;
+		sms->sender = senderNum ;
+		sms->msg = smsText ;
+		sms->PDU = smsPDU ;
+
+		//printSMS(sms) ;
+
+		if (isLongSMS) {
+			catLongSMS(sms, longSMSId, longSMSPos, longSMSLen) ;
+		}
+		else {
+			if (newSMSFunction) {
+				(*newSMSFunction)(sms);
+			}
+		}
+
+	}
+	else {
+		return -1;
+	}
+
+	return 0 ;
+}
+
 int readSMSinMemory(int addr) {
 
 	if(addr > 0 && addr <= 40){
@@ -637,162 +876,19 @@ int readSMSinMemory(int addr) {
 
 				pthread_mutex_unlock(&bufferMutex);
 
+				decodeNewSMSPDU(PDUstr) ;
 
-				int SMSCenterAddrLen = 0 ; // SMS Center Addrese len.
-				int cursor = 0 ;
-
-				sscanf(&PDUstr[cursor], "%02X", &SMSCenterAddrLen) ;
-
-				cursor += 2 + (SMSCenterAddrLen * 2) ;
-
-				int PDUType = 0 ;
-				sscanf(&PDUstr[cursor], "%02X", &PDUType) ;
-
-				int MTI  = ( PDUType >> 0 ) & 0x03 ;
-
-				if (MTI == 0x00) {
-
-					//int MMS  = ( PDUType >> 2 ) & 0x01 ;
-					//int SRI  = ( PDUType >> 5 ) & 0x01 ;
-					int UDHI = ( PDUType >> 6 ) & 0x01 ;
-					//int RP   = ( PDUType >> 7 ) & 0x01 ;
-
-					cursor += 2 ;
-
-					int SMSSenderAddrLen ;
-
-					sscanf(&PDUstr[cursor], "%02X", &SMSSenderAddrLen) ;
-					cursor += 2 ;
-
-					int PDUSenderLen = 2+SMSSenderAddrLen ;
-
-					if (PDUSenderLen % 2)
-						PDUSenderLen++ ;
-
-					char PDUSenderAddr[PDUSenderLen+1] ;
-					PDUSenderAddr[PDUSenderLen] = '\0' ;
-					memcpy(PDUSenderAddr, &PDUstr[cursor], PDUSenderLen) ;
-
-					// '+' + num len + '\0' ending
-					char * senderNum = (char *) malloc(1+SMSSenderAddrLen+1) ;
-
-					PDUDecodeNumber(PDUSenderAddr, senderNum) ;
-
-					// PDUSenderLen + '\0' ending
-					cursor += PDUSenderLen ;
-
-					unsigned char ProtocolID = 0 ;
-					sscanf(&PDUstr[cursor], "%02hhX", &ProtocolID) ;
-					cursor += 2 ;
-
-					unsigned char dataCodingID = 0 ;
-					sscanf(&PDUstr[cursor], "%02hhX", &dataCodingID) ;
-					cursor += 2 ;
-
-					char PDUdate[15] ;
-					time_t date = 0 ;
-					memcpy(PDUdate, &PDUstr[cursor], 14);
-					PDUdate[14] = 0 ;
-					PDUDecodeTime(PDUdate, &date);
-					cursor += 14 ;
-
-					int dataLen = 0 ;
-					sscanf(&PDUstr[cursor], "%02X", &dataLen) ;
-					cursor += 2 ;
-
-					int isLongSMS  = 0 ;
-					int headerSize = 0 ;
-					int headerType = -1 ;
-
-					int longSMSLen = 0 ; // total SMS count
-					int longSMSPos = 0 ; // pos of the actual sms
-
-					int longSMSId  = 0 ;
-
-					if (UDHI) {
-						int cursor2 = cursor ;
-
-						sscanf(&PDUstr[cursor2], "%02X", &headerSize) ;
-						headerSize++;
-						cursor2 += 2 ;
-
-						sscanf(&PDUstr[cursor2], "%02X", &headerType) ;
-						cursor2 += 2 + 2 ;
-
-						if (headerType == 0x00 || headerType == 0x08) {
-							isLongSMS = 1 ;
-
-							if (headerType == 0x00) {
-								sscanf(&PDUstr[cursor2], "%02X", &longSMSId) ;
-								cursor2 += 2 ;
-							}
-							else {
-								sscanf(&PDUstr[cursor2], "%04X", &longSMSId) ;
-								cursor2 += 4 ;
-							}
-
-							sscanf(&PDUstr[cursor2], "%02X", &longSMSLen) ;
-							cursor2 += 2 ;
-
-							sscanf(&PDUstr[cursor2], "%02X", &longSMSPos) ;
-
-							printf("IS LONG SMS (%X) : %d/%d\n", longSMSId, longSMSPos, longSMSLen);
-
-						}
-
-					}
-
-					char * smsText ;
-
-					if (dataCodingID == 0x00) {
-
-						smsText = (char *) malloc(dataLen*2) ; // allocate more for potential special character.
-						memset(smsText, 0, dataLen*2);
-						PDUDecodeData7b(&PDUstr[cursor], smsText, dataLen, headerSize) ;
-
-					}
-					else if (dataCodingID == 0x04) {
-						smsText = (char *) malloc(19);
-						strcpy(smsText, "MMS unsuported now") ;
-					}
-					else if (dataCodingID == 0x08) {
-
-						smsText = (char *) malloc((dataLen*2)+1) ;
-						PDUDecodeDataUnicode(&PDUstr[cursor], smsText, headerSize);
-
-					}
-					else {
-						smsText = (char *) malloc(20);
-						strcpy(smsText, "unsuported msg type") ;
-					}
-
-					SMS * sms = (SMS *) malloc(sizeof(SMS)) ;
-
-					sms->date = date ;
-					sms->sender = senderNum ;
-					sms->msg = smsText ;
-					sms->PDU = PDUstr ;
-
-					//printSMS(sms) ;
-
-					if (isLongSMS) {
-						catLongSMS(sms, longSMSId, longSMSPos, longSMSLen) ;
-					}
-					else {
-						if (newSMSFunction) {
-							(*newSMSFunction)(sms);
-						}
-					}
-
-				}
+				free(PDUstr);
 
 				free(cmdReturn) ;
+				cmdReturn = NULL ;
 
 				return 0 ;
 
 			}
 
 			free(cmdReturn) ;
+			cmdReturn = NULL ;
 
 		}
 		else return -1 ;
@@ -830,35 +926,6 @@ int delSMSinMemory(int addr) {
 	}
 
 	return 0 ;
-
-}
-
-time_t parseDate(char * date) {
-
-	int year, month, day ;
-	int hours, minutes, seconds ;
-	int timeZone ;
-	char timeZoneSign ; // + or -
-
-	sscanf(date, "%02d/%02d/%02d,%02d:%02d:%02d%c%02d",
-		&year, &month, &day,
-		&hours, &minutes, &seconds,
-		&timeZoneSign, &timeZone
-	);
-
-	year = year + 2000 ;
-	if (timeZoneSign == '-') timeZone = - timeZone ;
-
-	struct tm timeDesc ;
-
-	timeDesc.tm_year = year - 1900 ;
-	timeDesc.tm_mon = month ;
-	timeDesc.tm_mday = day ;
-	timeDesc.tm_hour = hours ;
-	timeDesc.tm_min = minutes ;
-	timeDesc.tm_sec = seconds ;
-
-	return ( mktime(&timeDesc) - ( 60 * 15 * timeZone ) ) ;
 
 }
 
@@ -900,6 +967,7 @@ int findChemAfterIndex(char * chem, char * chemError, int index, int timeout, ch
 					}
 					else {
 						free(cmd) ;
+						cmd = NULL ;
 					}
 
 					return searchIndex ;
@@ -912,6 +980,7 @@ int findChemAfterIndex(char * chem, char * chemError, int index, int timeout, ch
 					}
 					else {
 						free(cmd);
+						cmd = NULL ;
 					}
 
 					return -1 ;

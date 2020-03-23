@@ -10,6 +10,8 @@
 #include <sys/types.h>
 #include <fcntl.h>
 
+#include <mariadb/mysql.h>
+
 #include "at.h"
 
 void stop(int signal) {
@@ -43,7 +45,16 @@ void newSMS(SMS * sms){
 
 	}
 
+	MYSQL * mysql = NULL ;
+
+	mysql = mysql_init(mysql) ;
+
+	//mysql = mysql_real_connect(mysql, )
+
+	mysql_close(mysql);
+
 	freeSMS(sms);
+	sms = NULL ;
 
 }
 
@@ -58,13 +69,15 @@ int main(int argc, char const *argv[]) {
 
 			printf("init ok !!\n");
 
-			waitCallReady(1000);
+			waitCallReady(10000);
 
-			waitSMSReady(1000);
+			waitSMSReady(10000);
 
 			setSMSConfig();
 
 			setNewSMSFunction(&newSMS);
+
+			loadSMSList();
 
 			printf("Start main loop !!\n");
 			while (1) {

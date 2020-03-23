@@ -10,9 +10,15 @@
 
 int unicodeToUTF8(unsigned int unicodeChar, char outUTF8[] ) ;
 
+// fix impicite declaration
+
+time_t timegm(struct tm *tm); // should be in "time.h"
+
 // ** Public functions ***
 
-int PDUDecodeNumber(char inputData[], char outputData[]) {
+int PDUDecodeNumber(char inputData[], char outputData[], int numberLen) {
+
+   printf("input data = %s\n", inputData);
 
    if(strncmp(inputData, "91", 2) == 0 ){
 
@@ -42,6 +48,14 @@ int PDUDecodeNumber(char inputData[], char outputData[]) {
       }
 
    }
+   else if (strncmp(inputData, "D0", 2) == 0) {
+
+      int charCount = strlen(inputData) - 2 ;
+      charCount = (numberLen * 4) / 7 ;
+
+      PDUDecodeData7b(&inputData[2], outputData, charCount, 0);
+
+   }
 
    return 0 ;
 
@@ -60,10 +74,9 @@ int PDUDecodeTime(char inputData[], time_t * date) {
          dateString[i+1] = tmp ;
       }
 
-      int year, month, day, hour, minute, second ;
-      char timeZone ;
+      int year, month, day, hour, minute, second, timeZone ;
 
-      sscanf(dateString, "%02d%02d%02d%02d%02d%02d%02hhX",
+      sscanf(dateString, "%02d%02d%02d%02d%02d%02d%02d",
          &year, &month, &day,
          &hour, &minute, &second,
          &timeZone

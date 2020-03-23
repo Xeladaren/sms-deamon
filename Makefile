@@ -17,6 +17,7 @@ export CCFLAGS += -pthread
 
 export LDFLAGS += -I$(LIBDIR)/
 export LDFLAGS += -pthread
+export LDFLAGS += -lmariadbclient
 
 export PROG = $(BINDIR)/$(EXENAME)
 
@@ -56,4 +57,3 @@ create :
 	mkdir -p $(LIBDIR)
 	mkdir -p $(OBJDIR)
 	touch $(SRCDIR)/main.c
-
