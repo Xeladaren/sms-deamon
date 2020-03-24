@@ -349,7 +349,7 @@ int loadSMSList() {
 
 	sendCmd("AT+CMGL=4\n\r") ;
 
-	int indexOK = findChemAfterIndex("OK", "ERROR", lastBufferIndex, 1000, NULL) ;
+	int indexOK = findChemAfterIndex("OK", "ERROR", lastBufferIndex, 10000, NULL) ;
 
 	printf("index OK %d %d\n", lastBufferIndex, indexOK);
 
@@ -382,7 +382,7 @@ int loadSMSList() {
 
 				sscanf(cmd, "+CMGL: %d,%d", &memAddr, &status) ;
 
-				if(status == 0) {
+				if(status == 0 || status == 1) {
 					nextIsNewPDU = 1 ;
 				}
 
@@ -480,7 +480,7 @@ void * readThreadFunc(void * param) {
 
 				FILE * logFile = fopen("./log.txt", "a") ;
 
-				if (logFile != NULL) {
+				if (logFile) {
 
 					fprintf(logFile, "%s\n", cmd) ;
 					printf("%d> %s\n", cmdIndex, cmd);
@@ -803,6 +803,8 @@ int decodeNewSMSPDU(char PDUstr[]) {
 			strcpy(smsText, "MMS unsuported now") ;
 		}
 		else if (dataCodingID == 0x08) {
+
+			printf("RAW UNICODE = %s\n", &PDUstr[cursor]);
 
 			smsText = (char *) malloc((dataLen*2)+1) ;
 			PDUDecodeDataUnicode(&PDUstr[cursor], smsText, headerSize);

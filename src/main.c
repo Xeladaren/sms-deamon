@@ -10,9 +10,8 @@
 #include <sys/types.h>
 #include <fcntl.h>
 
-#include <mariadb/mysql.h>
-
 #include "at.h"
+#include "sql-send.h"
 
 void stop(int signal) {
 
@@ -36,22 +35,19 @@ void newSMS(SMS * sms){
 
 		FILE * file = fopen(fileName, "w") ;
 
-		fprintf(file, "%s\n", sms->PDU);
-		fprintf(file, "%ld\n", sms->date);
-		fprintf(file, "%s\n", sms->sender);
-		fprintf(file, "%s\n", sms->msg);
+		if (file) {
 
-		fclose(file) ;
+			fprintf(file, "%s\n", sms->PDU);
+			fprintf(file, "%ld\n", sms->date);
+			fprintf(file, "%s\n", sms->sender);
+			fprintf(file, "%s\n", sms->msg);
+
+			fclose(file) ;
+		}
 
 	}
 
-	MYSQL * mysql = NULL ;
-
-	mysql = mysql_init(mysql) ;
-
-	//mysql = mysql_real_connect(mysql, )
-
-	mysql_close(mysql);
+	saveSMSinDB(sms) ;
 
 	freeSMS(sms);
 	sms = NULL ;
@@ -82,16 +78,19 @@ int main(int argc, char const *argv[]) {
 			printf("Start main loop !!\n");
 			while (1) {
 
+				/*
 				char command[100] ;
 				char writeMSG[103] ;
 				memset(writeMSG, 0, 103) ;
-
 
 				scanf("%s", command) ;
 
 				sprintf(writeMSG, "%s\n\r", command);
 
 				writeCustomCmd(writeMSG, strlen(writeMSG));
+				*/
+				sleep(1);
+				printf("run\n");
 
 			}
 

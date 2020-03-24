@@ -1,3 +1,6 @@
+#ifndef AT
+#define AT
+
 #include <time.h>
 
 typedef enum pinStatus {SIN_ERROR, SIN_READY, SIM_PIN, SIM_PIN2, SIM_PUK, SIM_PUK2, SIM_UNKNOWN} PinStatus ;
@@ -42,3 +45,6 @@ void printSMS(SMS * sms) ;
 void freeSMS(SMS * sms) ;
 
 int loadSMSList() ;
+
+
+#endif

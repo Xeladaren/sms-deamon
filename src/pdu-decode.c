@@ -177,14 +177,36 @@ int PDUDecodeDataUnicode(char inputData[], char outputData[], int headerSize) {
 
    outputData[0] = 0 ;
 
+   unsigned int char4byte = 0x00 ;
+
    for (size_t i = headerSize*2; i < strlen(inputData); i+=4) {
 
       unsigned int unicodeChar = 0 ;
       sscanf(&inputData[i], "%04X", &unicodeChar) ;
 
-      char utf8char[5] ;
-      unicodeToUTF8(unicodeChar, utf8char);
-      strcat(outputData, utf8char);
+      if ((unicodeChar & 0xFC00) == 0xD800) {
+         char4byte = unicodeChar ;
+      }
+      else if((unicodeChar & 0xFC00) == 0xDC00) {
+
+         int w = ( char4byte   & 0x03FF ) >> 0x06 ;
+         int x = ( char4byte   & 0x003F ) >> 0x00 ;
+
+         int u = w + 1 ;
+
+         unicodeChar &= 0x03FF ;
+         unicodeChar |= x << 0x0A ;
+         unicodeChar |= u << 0x10 ;
+
+         char4byte = 0x00 ;
+
+      }
+
+      if(char4byte == 0x00) {
+         char utf8char[5] ;
+         unicodeToUTF8(unicodeChar, utf8char);
+         strcat(outputData, utf8char);
+      }
 
    }
    return 0 ;
