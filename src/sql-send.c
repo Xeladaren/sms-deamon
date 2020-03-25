@@ -23,7 +23,7 @@ int saveSMSinDB(SMS * sms) {
 	mysql = mysql_real_connect(mysql, db_host, db_user, db_pass, db_name, 0, NULL, 0);
 
 	if (mysql) {
-		printf("MySQL connection ok\n");
+		//printf("MySQL connection ok\n");
 
 		struct tm * tm = gmtime(&sms->date);
 
@@ -38,7 +38,7 @@ int saveSMSinDB(SMS * sms) {
 			tm->tm_sec
 		);
 
-		printf("formatedDate = %s\n", formatedDate);
+		//printf("formatedDate = %s\n", formatedDate);
 
       char formatedSender[(strlen(sms->sender)*2)+1] ;
       char formatedMsg[(strlen(sms->msg)*2)+1] ;
@@ -54,17 +54,17 @@ int saveSMSinDB(SMS * sms) {
 
 		sprintf(cmdSQL, cmdSQLformat, formatedDate, formatedSender, formatedMsg) ;
 
-		printf("SQL = %s\n", cmdSQL);
+		//printf("SQL = %s\n", cmdSQL);
 
 		int ret = mysql_real_query(mysql, cmdSQL, strlen(cmdSQL));
 
 		if (ret == 0) {
-			printf("SQL Query ok\n");
+			//printf("SQL Query ok\n");
 
 			ret = mysql_commit(mysql) ;
 
 			if (ret == 0) {
-				printf("SQL Commit ok\n");
+				//printf("SQL Commit ok\n");
 			}
 			else {
 				printf("SQL Commit error : %d\n", ret);

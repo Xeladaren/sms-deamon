@@ -17,6 +17,15 @@ typedef struct
 
 } SMS;
 
+typedef struct
+{
+   time_t   localDate ;  // La date local d'arrivé du SMS long.
+   int      longSMSID;   // The ID of the long SMS
+   int      longSMSLen;  // Number of SMS in the long SMS.
+   int      SMSCount;    // Number of SMS already received.
+   char *   sender;      // The Phone number of the sender
+   SMS * *  smsList;   // List of SMS already received.
+} LongSMS;
 
 int initAT(char ttyFILE[], int timeout) ;
 

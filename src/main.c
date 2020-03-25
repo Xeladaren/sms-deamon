@@ -24,6 +24,7 @@ void stop(int signal) {
 
 void newSMS(SMS * sms){
 
+	printf("[new sms received]");
 	printSMS(sms) ;
 
 	int ret = mkdir("sms", 0755) ;
@@ -48,7 +49,7 @@ void newSMS(SMS * sms){
 	}
 
 	saveSMSinDB(sms) ;
-
+	
 	freeSMS(sms);
 	sms = NULL ;
 
@@ -63,8 +64,6 @@ int main(int argc, char const *argv[]) {
 
 		if (setPinAT("0000", 10000) == SIN_READY) {
 
-			printf("init ok !!\n");
-
 			waitCallReady(10000);
 
 			waitSMSReady(10000);
@@ -73,9 +72,12 @@ int main(int argc, char const *argv[]) {
 
 			setNewSMSFunction(&newSMS);
 
+			printf("init ok\n");
+			printf("get new sms\n");
+
 			loadSMSList();
 
-			printf("Start main loop !!\n");
+			printf("start main loop\n");
 			while (1) {
 
 				/*
@@ -89,8 +91,8 @@ int main(int argc, char const *argv[]) {
 
 				writeCustomCmd(writeMSG, strlen(writeMSG));
 				*/
-				sleep(1);
-				printf("run\n");
+				sleep(10);
+				//printf("run\n");
 
 			}
 

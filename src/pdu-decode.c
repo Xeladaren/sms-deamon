@@ -18,7 +18,7 @@ time_t timegm(struct tm *tm); // should be in "time.h"
 
 int PDUDecodeNumber(char inputData[], char outputData[], int numberLen) {
 
-   printf("input data = %s\n", inputData);
+   //printf("input data = %s\n", inputData);
 
    if(strncmp(inputData, "91", 2) == 0 ){
 

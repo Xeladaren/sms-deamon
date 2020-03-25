@@ -308,40 +308,42 @@ int setNewSMSFunction(void (*function)(SMS *)) {
 
 void printSMS(SMS * sms) {
 
-	printf("NUM : %s\n", sms->sender);
+	printf("[%s]", sms->sender);
 
 	time_t date = sms->date ;
 
 	struct tm * dateTM = gmtime(&date) ;
 
-	printf("DATE : %02d/%02d/%04d %02d:%02d:%02d UTC\n",
-		dateTM->tm_mday,
-		dateTM->tm_mon,
+	printf("(%04d-%02d-%02d %02d:%02d:%02d UTC) : ",
 		dateTM->tm_year + 1900,
+		dateTM->tm_mon,
+		dateTM->tm_mday,
 		dateTM->tm_hour,
 		dateTM->tm_min,
 		dateTM->tm_sec
 	);
 
-	printf("MSG : \n%s\n____\n", sms->msg);
+	printf("%s\n", sms->msg);
 
 
 }
 
 void freeSMS(SMS * sms) {
-	free(sms->sender);
-	sms->sender = NULL ;
-	free(sms->msg);
-	sms->msg = NULL ;
-	free(sms->PDU);
-	sms->PDU = NULL ;
+	if (sms) {
+		free(sms->sender);
+		sms->sender = NULL ;
+		free(sms->msg);
+		sms->msg = NULL ;
+		free(sms->PDU);
+		sms->PDU = NULL ;
+	}
 	free(sms);
 	sms = NULL ;
 }
 
 int loadSMSList() {
 
-	printf("Load SMS list\n");
+	//printf("Load SMS list\n");
 
 	pthread_mutex_lock(&bufferMutex);
 	int lastBufferIndex = bufferIndex ;
@@ -351,7 +353,7 @@ int loadSMSList() {
 
 	int indexOK = findChemAfterIndex("OK", "ERROR", lastBufferIndex, 10000, NULL) ;
 
-	printf("index OK %d %d\n", lastBufferIndex, indexOK);
+	//printf("index OK %d %d\n", lastBufferIndex, indexOK);
 
 	if (indexOK != -1) {
 
@@ -427,7 +429,7 @@ void * readThreadFunc(void * param) {
 	char outOld = '\n' ;
 	int index2 = 0 ;
 
-	printf("Thread START\n");
+	printf("AT read thread start\n");
 
 	pthread_mutex_lock(&threadRunMutex) ;
 	threadRun = 1 ;
@@ -490,19 +492,19 @@ void * readThreadFunc(void * param) {
 
 				if (strstr(cmd, "Call Ready")) {
 
-					printf("Call Ready !!\n");
+					//printf("Call Ready !!\n");
 					CallReady = 1 ;
 
 				}
 				else if (strstr(cmd, "SMS Ready")) {
 
-					printf("SMS Ready !!\n");
+					//printf("SMS Ready !!\n");
 					SMSReady = 1 ;
 
 				}
 				else if (strstr(cmd, "+CMTI:")) {
 
-					printf("New SMS !!\n");
+					printf("New sms received.\n");
 
 					char * cmdSMS = malloc(strlen(cmd)+1) ;
 					strcpy(cmdSMS, cmd) ;
@@ -588,7 +590,7 @@ int setPreferredMessageStorage() {
 
 int setMessageFormat() {
 
-	printf("set Message Format !!\n");
+	//printf("set Message Format !!\n");
 
 	pthread_mutex_lock(&bufferMutex) ;
 	int lastBufferIndex = bufferIndex ;
@@ -606,77 +608,142 @@ int setMessageFormat() {
 
 int catLongSMS(SMS * sms, int longSMSId, int longSMSPos, int longSMSLen) {
 
-	static SMS * * smsList = NULL ;
-	static int count = 0 ;
+	static LongSMS * longSMSList = NULL ;
+	static int longSMSCount = 0 ;
+	int newLongSMSCount = longSMSCount ;
 
-	if (smsList == NULL) {
+	printf("[long sms %X][%d/%d]", longSMSId, longSMSPos, longSMSLen);
+	printSMS(sms) ;
 
-		smsList = malloc( sizeof(SMS *) * longSMSLen ) ;
+	int isNewLongSMS = 1 ;
+	for (size_t i = 0; i < longSMSCount; i++) {
 
-	}
+		LongSMS * longSMS = &longSMSList[i];
 
-	smsList[longSMSPos-1] = sms ;
-	count++ ;
+		int isSameID 	= (longSMSId == longSMS->longSMSID) ;
+		int isSameLen	= (longSMSLen == longSMS->longSMSLen) ;
+		int isSameNum 	= strcmp(sms->sender, longSMS->sender) == 0 ;
 
-	printf("count = %d - %d\n", count, longSMSLen);
+		printf("test = %d %d %d\n", isSameID, isSameLen, isSameNum);
 
-	if (count == longSMSLen) {
+		if (isSameID && isSameLen && isSameNum) {
+			isNewLongSMS = 0 ;
 
-		SMS * completSMS = (SMS *) malloc(sizeof(SMS)) ;
+			printf("is same sms\n");
 
-		completSMS->sender = malloc(strlen(sms->sender)+1) ;
-		strcpy(completSMS->sender, sms->sender) ;
+			longSMS->smsList[longSMSPos-1] = sms ;
+			longSMS->SMSCount++ ;
 
-		time_t date = 0 ;
+			if (longSMS->SMSCount == longSMS->longSMSLen) {
 
-		int finalSMSSize = 1 ;
-		int finalPDUSize = 1 ;
+				printf("sms is compeled\n");
 
-		for (size_t i = 0; i < count; i++) {
-			finalSMSSize += strlen(smsList[i]->msg) ;
-			finalPDUSize += strlen(smsList[i]->PDU) + 1 ;
+				SMS * smsFinal = (SMS *) malloc(sizeof(SMS)) ;
+
+				time_t smsFinalTime = sms->date ;
+
+				char * smsFinalSender = (char *) malloc(strlen(longSMS->sender)+1) ;
+				strcpy(smsFinalSender, sms->sender) ;
+
+				char * smsFinalMsg = (char *) malloc(1);
+				size_t smsFinalMsgSize = 1 ;
+				smsFinalMsg[0] = 0 ;
+
+				char * smsFinalPDU = (char *) malloc(1);
+				size_t smsFinalPDUSize = 1 ;
+				smsFinalPDU[0] = 0 ;
+
+				for (size_t j = 0; j < longSMS->SMSCount; j++) {
+
+					SMS * smsi = longSMS->smsList[j] ;
+
+					smsFinalMsgSize += strlen(smsi->msg) ;
+					smsFinalMsg = realloc(smsFinalMsg, smsFinalMsgSize) ;
+					strcat(smsFinalMsg, smsi->msg) ;
+
+					smsFinalPDUSize += strlen(smsi->PDU) + 1 ;
+					smsFinalPDU = realloc(smsFinalPDU, smsFinalPDUSize) ;
+					strcat(smsFinalPDU, smsi->PDU);
+					strcat(smsFinalPDU, " ");
+
+				}
+
+				longSMS->localDate = 0 ;
+
+				smsFinal->date 	= smsFinalTime ;
+				smsFinal->sender 	= smsFinalSender ;
+				smsFinal->msg 		= smsFinalMsg ;
+				smsFinal->PDU 		= smsFinalPDU ;
+
+				printf("[final long sms]");
+				printSMS(smsFinal);
+
+				if (newSMSFunction) {
+					(*newSMSFunction)(smsFinal);
+				}
+			}
 		}
 
-		printf("Final SMS size = %d\n", finalSMSSize);
-		printf("Final PDU size = %d\n", finalPDUSize);
+		time_t actualTime = time(NULL);
 
-		char * msg = malloc(finalSMSSize);
-		msg[0] = 0 ;
+		// remove long sms if is outdated.
+		if ((actualTime - longSMS->localDate) > 60) {
+			printf("delet old sms\n");
 
-		char * PDU = malloc(finalPDUSize);
-		PDU[0] = 0 ;
-
-		for (size_t i = 0; i < count; i++) {
-
-			if (smsList[i]->date > date) {
-				date = smsList[i]->date ;
+			for (size_t j = 0; j < longSMS->longSMSLen; j++) {
+				if (longSMS->smsList[j]) {
+					freeSMS(longSMS->smsList[j]) ;
+				}
 			}
 
-			strcat(msg, smsList[i]->msg) ;
+			longSMS->sender = NULL ;
+			free(longSMS->smsList);
+			longSMS->smsList = NULL ;
 
-			strcat(PDU, smsList[i]->PDU) ;
-			strcat(PDU, " ");
-
-			freeSMS(smsList[i]);
-			smsList[i] = NULL ;
-
-		}
-
-		completSMS->date = date ;
-		completSMS->msg = msg ;
-		completSMS->PDU = PDU ;
-
-		free(smsList);
-		smsList = NULL ;
-		count = 0 ;
-
-		printf("coucou\n");
-
-		if (newSMSFunction) {
-			(*newSMSFunction)(completSMS);
+			newLongSMSCount-- ;
 		}
 
 	}
+
+	if (isNewLongSMS) {
+		newLongSMSCount++ ;
+		printf("is new longSMS\n");
+	}
+
+	LongSMS * newLongSMSList = (LongSMS *) malloc(sizeof(LongSMS)*newLongSMSCount) ;
+
+	size_t i2 = 0 ;
+	for (size_t i = 0; i < longSMSCount; i++) {
+
+		// remove long sms if is outdated.
+		if (longSMSList[i].smsList != NULL) {
+			newLongSMSList[i2] = longSMSList[i] ;
+		}
+
+		i2++ ;
+
+	}
+	//longSMSId, int longSMSPos, int longSMSLen
+	if (isNewLongSMS) {
+
+		LongSMS newLongSMS ;
+		newLongSMS.localDate = time(NULL) ;
+		newLongSMS.longSMSID = longSMSId ;
+		newLongSMS.longSMSLen = longSMSLen ;
+		newLongSMS.SMSCount = 1 ;
+		newLongSMS.sender = sms->sender ;
+		newLongSMS.smsList = (SMS **) malloc(sizeof(SMS *)*longSMSLen) ;
+
+		memset(newLongSMS.smsList, 0, sizeof(SMS *)*longSMSLen) ;
+
+		newLongSMS.smsList[longSMSPos-1] = sms ;
+
+		newLongSMSList[i2] = newLongSMS ;
+	}
+
+	free(longSMSList) ;
+	longSMSList = newLongSMSList ;
+	longSMSCount = newLongSMSCount ;
 
 	return 0 ;
 
@@ -783,7 +850,7 @@ int decodeNewSMSPDU(char PDUstr[]) {
 
 				sscanf(&PDUstr[cursor2], "%02X", &longSMSPos) ;
 
-				printf("IS LONG SMS (%X) : %d/%d\n", longSMSId, longSMSPos, longSMSLen);
+				//printf("IS LONG SMS (%X) : %d/%d\n", longSMSId, longSMSPos, longSMSLen);
 
 			}
 
@@ -804,7 +871,7 @@ int decodeNewSMSPDU(char PDUstr[]) {
 		}
 		else if (dataCodingID == 0x08) {
 
-			printf("RAW UNICODE = %s\n", &PDUstr[cursor]);
+			//printf("RAW UNICODE = %s\n", &PDUstr[cursor]);
 
 			smsText = (char *) malloc((dataLen*2)+1) ;
 			PDUDecodeDataUnicode(&PDUstr[cursor], smsText, headerSize);
@@ -910,7 +977,7 @@ int delSMSinMemory(int addr) {
 		memset(writeMSG, 0, 13) ;
 
 		sprintf(writeMSG, "AT+CMGD=%d\n\r", addr) ;
-		printf("del msg in %d\n", addr);
+		//printf("delet sms in GSM memory (%d)\n", addr);
 
 		pthread_mutex_lock(&bufferMutex) ;
 		int lastBufferIndex = bufferIndex ;
