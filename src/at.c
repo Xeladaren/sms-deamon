@@ -639,6 +639,7 @@ int catLongSMS(SMS * sms, int longSMSId, int longSMSPos, int longSMSLen) {
 
 			longSMS->smsList[longSMSPos-1] = sms ;
 			longSMS->SMSCount++ ;
+			longSMS->localDate = time(NULL) ;
 
 			if (longSMS->SMSCount == longSMS->longSMSLen) {
 
