@@ -9,7 +9,6 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <stdlib.h>
-#include <wchar.h>
 
 #include "at.h"
 #include "pdu-decode.h"
@@ -412,18 +411,19 @@ int loadSMSList() {
 
 int sendCmd(char cmd[]) {
 
+	printf("lock cmd > %s\n", cmd);
 	pthread_mutex_lock(&ttyMutex) ;
 
 	write(ttySMS, cmd, strlen(cmd)) ;
 
-	pthread_mutex_unlock(&ttyMutex) ;
+	//pthread_mutex_unlock(&ttyMutex) ;
 
 	return 0 ;
 }
 
 void * readThreadFunc(void * param) {
 
-	pthread_mutex_lock(&ttyMutex) ;
+	//pthread_mutex_lock(&ttyMutex) ;
 
 	char out ;
 	char outOld = '\n' ;
@@ -449,11 +449,11 @@ void * readThreadFunc(void * param) {
 		pthread_mutex_unlock(&bufferMutex) ;
 
 
-		pthread_mutex_unlock(&ttyMutex) ;
+		//pthread_mutex_unlock(&ttyMutex) ;
 
 		read(ttySMS, &out, 1) ;
 
-		pthread_mutex_lock(&ttyMutex) ;
+		//pthread_mutex_lock(&ttyMutex) ;
 
 		if(out == 0)
 			continue ;
@@ -490,19 +490,25 @@ void * readThreadFunc(void * param) {
 
 				}
 
-				if (strstr(cmd, "Call Ready")) {
+				if (!strncmp(cmd, "OK", 2) || !strncmp(cmd, "ERROR", 5)) {
+
+					printf("unlock cmd\n");
+					pthread_mutex_unlock(&ttyMutex) ;
+
+				}
+				else if (!strncmp(cmd, "Call Ready", 10)) {
 
 					//printf("Call Ready !!\n");
 					CallReady = 1 ;
 
 				}
-				else if (strstr(cmd, "SMS Ready")) {
+				else if (!strncmp(cmd, "SMS Ready", 9)) {
 
 					//printf("SMS Ready !!\n");
 					SMSReady = 1 ;
 
 				}
-				else if (strstr(cmd, "+CMTI:")) {
+				else if (!strncmp(cmd, "+CMTI: \"SM\"", 11)) {
 
 					printf("New sms received.\n");
 
@@ -512,7 +518,7 @@ void * readThreadFunc(void * param) {
 					pthread_create(&newSMSThread, NULL, &newSMSThreadFunc, (void *) cmdSMS);
 
 				}
-				else if (strstr(cmd, "RING")) {
+				else if (!strncmp(cmd, "RING", 4)) {
 
 				}
 
@@ -553,15 +559,15 @@ void * newSMSThreadFunc(void * param) {
 
 	int memAddr = 0 ;
 
-	if(strstr(cmd, "+CMTI: \"SM\",")) {
+	if(!strncmp(cmd, "+CMTI: \"SM\",", 12)) {
 		sscanf(cmd, "+CMTI: \"SM\",%d", &memAddr) ;
 
-		sleep(1);
+		//sleep(1);
 
-		readSMSinMemory(memAddr) ;
-
-		delSMSinMemory(memAddr) ;
-
+		if (memAddr) {
+			readSMSinMemory(memAddr) ;
+			delSMSinMemory(memAddr) ;
+		}
 	}
 
 	free(cmd) ;
@@ -608,7 +614,7 @@ int setMessageFormat() {
 
 int catLongSMS(SMS * sms, int longSMSId, int longSMSPos, int longSMSLen) {
 
-	static LongSMS * longSMSList = NULL ;
+	static LongSMS * * longSMSList = NULL ;
 	static int longSMSCount = 0 ;
 	int newLongSMSCount = longSMSCount ;
 
@@ -618,7 +624,7 @@ int catLongSMS(SMS * sms, int longSMSId, int longSMSPos, int longSMSLen) {
 	int isNewLongSMS = 1 ;
 	for (size_t i = 0; i < longSMSCount; i++) {
 
-		LongSMS * longSMS = &longSMSList[i];
+		LongSMS * longSMS = longSMSList[i];
 
 		int isSameID 	= (longSMSId == longSMS->longSMSID) ;
 		int isSameLen	= (longSMSLen == longSMS->longSMSLen) ;
@@ -687,7 +693,7 @@ int catLongSMS(SMS * sms, int longSMSId, int longSMSPos, int longSMSLen) {
 		time_t actualTime = time(NULL);
 
 		// remove long sms if is outdated.
-		if ((actualTime - longSMS->localDate) > 60) {
+		if ((actualTime - longSMS->localDate) > 60*30) {
 			printf("delet old sms\n");
 
 			for (size_t j = 0; j < longSMS->longSMSLen; j++) {
@@ -696,9 +702,11 @@ int catLongSMS(SMS * sms, int longSMSId, int longSMSPos, int longSMSLen) {
 				}
 			}
 
-			longSMS->sender = NULL ;
 			free(longSMS->smsList);
 			longSMS->smsList = NULL ;
+			free(longSMS);
+
+			longSMSList[i] = NULL ;
 
 			newLongSMSCount-- ;
 		}
@@ -710,33 +718,33 @@ int catLongSMS(SMS * sms, int longSMSId, int longSMSPos, int longSMSLen) {
 		printf("is new longSMS\n");
 	}
 
-	LongSMS * newLongSMSList = (LongSMS *) malloc(sizeof(LongSMS)*newLongSMSCount) ;
+	LongSMS * * newLongSMSList = (LongSMS * *) malloc(sizeof(LongSMS *)*newLongSMSCount) ;
 
 	size_t i2 = 0 ;
 	for (size_t i = 0; i < longSMSCount; i++) {
 
 		// remove long sms if is outdated.
-		if (longSMSList[i].smsList != NULL) {
+		if (longSMSList[i] != NULL) {
 			newLongSMSList[i2] = longSMSList[i] ;
+			i2++ ;
 		}
-
-		i2++ ;
 
 	}
 	//longSMSId, int longSMSPos, int longSMSLen
 	if (isNewLongSMS) {
 
-		LongSMS newLongSMS ;
-		newLongSMS.localDate = time(NULL) ;
-		newLongSMS.longSMSID = longSMSId ;
-		newLongSMS.longSMSLen = longSMSLen ;
-		newLongSMS.SMSCount = 1 ;
-		newLongSMS.sender = sms->sender ;
-		newLongSMS.smsList = (SMS **) malloc(sizeof(SMS *)*longSMSLen) ;
+		LongSMS * newLongSMS = (LongSMS *) malloc(sizeof(LongSMS));
 
-		memset(newLongSMS.smsList, 0, sizeof(SMS *)*longSMSLen) ;
+		newLongSMS->localDate = time(NULL) ;
+		newLongSMS->longSMSID = longSMSId ;
+		newLongSMS->longSMSLen = longSMSLen ;
+		newLongSMS->SMSCount = 1 ;
+		newLongSMS->sender = sms->sender ;
+		newLongSMS->smsList = (SMS **) malloc(sizeof(SMS *)*longSMSLen) ;
 
-		newLongSMS.smsList[longSMSPos-1] = sms ;
+		memset(newLongSMS->smsList, 0, sizeof(SMS *)*longSMSLen) ;
+
+		newLongSMS->smsList[longSMSPos-1] = sms ;
 
 		newLongSMSList[i2] = newLongSMS ;
 	}

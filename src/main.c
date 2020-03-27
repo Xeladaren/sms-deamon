@@ -49,7 +49,7 @@ void newSMS(SMS * sms){
 	}
 
 	saveSMSinDB(sms) ;
-	
+
 	freeSMS(sms);
 	sms = NULL ;
 
@@ -73,8 +73,8 @@ int main(int argc, char const *argv[]) {
 			setNewSMSFunction(&newSMS);
 
 			printf("init ok\n");
-			printf("get new sms\n");
 
+			printf("get new sms\n");
 			loadSMSList();
 
 			printf("start main loop\n");
@@ -93,6 +93,9 @@ int main(int argc, char const *argv[]) {
 				*/
 				sleep(10);
 				//printf("run\n");
+
+				//printf("get new sms\n");
+				//loadSMSList();
 
 			}
 
