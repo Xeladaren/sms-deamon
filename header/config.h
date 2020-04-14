@@ -1,7 +1,7 @@
-static char * conf_db_host = NULL ;
-static char * conf_db_user = NULL ;
-static char * conf_db_pass = NULL ;
-static char * conf_db_name = NULL ;
+extern char * conf_db_host ;
+extern char * conf_db_user ;
+extern char * conf_db_pass ;
+extern char * conf_db_name ;
 
 
-int loadConfig(char file[]) ;
+int loadConfig(char filePath[]) ;

@@ -1,1 +1,1 @@
-scp -r Makefile src/ header/ pi@$1:~/sms-deamon/
+scp -r Makefile example.conf src/ header/ pi@$1:~/sms-deamon/

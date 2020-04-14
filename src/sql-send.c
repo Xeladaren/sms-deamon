@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "config.h"
+
 // *** private Prototype ***
 
 
@@ -13,14 +15,9 @@ int saveSMSinDB(SMS * sms) {
 
    MYSQL * mysql = NULL ;
 
-	char db_host[] = "localhost" ;
-	char db_user[] = "pi" ;
-	char db_pass[] = "" ;
-	char db_name[] = "webSMS" ;
-
 	mysql = mysql_init(mysql) ;
 
-	mysql = mysql_real_connect(mysql, db_host, db_user, db_pass, db_name, 0, NULL, 0);
+	mysql = mysql_real_connect(mysql, conf_db_host, conf_db_user, conf_db_pass, conf_db_name, 0, NULL, 0);
 
 	if (mysql) {
 		//printf("MySQL connection ok\n");
@@ -79,7 +76,7 @@ int saveSMSinDB(SMS * sms) {
 
 	}
 	else {
-		printf("MySQL connection fail\n");
+		printf("SQL connection fail\n");
       return -1 ;
 	}
 

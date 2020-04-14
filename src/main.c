@@ -95,11 +95,11 @@ int main(int argc, char const *argv[]) {
 
 				writeCustomCmd(writeMSG, strlen(writeMSG));
 				*/
-				sleep(10);
+				sleep(60);
 				//printf("run\n");
 
 				//printf("get new sms\n");
-				//loadSMSList();
+				loadSMSList();
 
 			}
 
