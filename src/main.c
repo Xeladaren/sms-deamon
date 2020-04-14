@@ -12,6 +12,8 @@
 
 #include "at.h"
 #include "sql-send.h"
+#include "config.h"
+
 
 void stop(int signal) {
 
@@ -59,6 +61,8 @@ int main(int argc, char const *argv[]) {
 
 	signal(SIGINT, stop);
 	signal(SIGKILL, stop);
+
+	loadConfig("example.conf");
 
 	if (initAT("/dev/ttyS0", 1000) == 0) {
 
